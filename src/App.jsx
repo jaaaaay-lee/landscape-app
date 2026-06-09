@@ -65,9 +65,22 @@ const I18N = {
     exVat: "ex GST", emailReport: "Email", myEmail: "My Email (sender)",
     clientEmail: "Client Email", exportCsv: "Export CSV", templates: "Templates",
     saveTemplate: "Save as Template", useTemplate: "Use Template", templateName: "Template name",
-    noTemplates: "No saved templates.", signature: "Client Signature", sign: "Sign here",
-    clearSig: "Clear", signed: "Signed", addSignature: "Add Client Signature",
+    noTemplates: "No saved templates.", signature: "My Signature", sign: "Sign here",
+    clearSig: "Clear", signed: "Signed", addSignature: "Add My Signature",
     pickDim: "Pick a measured length from this item's photos",
+    modeQuote: "Quote Visit", modeInspect: "Inspection", modeFinal: "Final Quote",
+    chooseMode: "What is this visit for?",
+    quoteVisitDesc: "First visit — measure & request subcontractor quotes",
+    inspectDesc: "Inspect progress & report to client",
+    finalDesc: "Combine sub quotes, add margin, build client quote",
+    subQuotes: "Subcontractor Quotes", addSubQuote: "Add Sub Quote", subAmount: "Amount ($)",
+    subMemo: "Memo / scope", include: "Include", margin: "Margin", defaultMargin: "Default margin (%)",
+    tradeMargin: "margin %", myWork: "My Own Work", addMyWork: "Add My Work",
+    workTitle: "Description", workAmount: "Amount ($)", profitSummary: "Profit Summary",
+    cost: "Cost (subs + my work)", marginAmt: "Margin", clientPrice: "Client Price (ex GST)",
+    netProfit: "Net Profit", buildClientQuote: "Build Client Quote", quoteNo: "Quote No.",
+    validUntil: "Valid until", validNote: "This quote is valid for the period shown above.",
+    clientQuoteNote: "Client quote shows final prices only — subcontractor costs and margins are hidden.",
   },
   ko: {
     projects: "프로젝트", newProject: "새 프로젝트", noProjects: "프로젝트가 없습니다 — 새로 만들어 시작하세요.",
@@ -100,9 +113,22 @@ const I18N = {
     exVat: "GST 별도", emailReport: "이메일", myEmail: "내 이메일 (발신)",
     clientEmail: "클라이언트 이메일", exportCsv: "CSV 내보내기", templates: "템플릿",
     saveTemplate: "템플릿으로 저장", useTemplate: "템플릿 사용", templateName: "템플릿 이름",
-    noTemplates: "저장된 템플릿이 없습니다.", signature: "클라이언트 서명", sign: "여기에 서명",
-    clearSig: "지우기", signed: "서명 완료", addSignature: "클라이언트 서명 추가",
+    noTemplates: "저장된 템플릿이 없습니다.", signature: "내 서명", sign: "여기에 서명",
+    clearSig: "지우기", signed: "서명 완료", addSignature: "내 서명 추가",
     pickDim: "이 항목 사진에서 측정한 길이 선택",
+    modeQuote: "견적 방문", modeInspect: "점검", modeFinal: "최종 견적",
+    chooseMode: "이번 방문은 어떤 목적인가요?",
+    quoteVisitDesc: "첫 방문 — 측정하고 하청에 견적 요청",
+    inspectDesc: "진행 상황 점검 후 클라이언트에 보고",
+    finalDesc: "하청 견적 취합 → 마진 적용 → 클라이언트 견적서",
+    subQuotes: "하청 견적", addSubQuote: "하청 견적 추가", subAmount: "금액 ($)",
+    subMemo: "메모 / 범위", include: "포함", margin: "마진", defaultMargin: "기본 마진 (%)",
+    tradeMargin: "마진 %", myWork: "내 직접 작업", addMyWork: "내 작업 추가",
+    workTitle: "내용", workAmount: "금액 ($)", profitSummary: "이익 요약",
+    cost: "원가 (하청+내작업)", marginAmt: "마진", clientPrice: "클라이언트 가격 (GST 별도)",
+    netProfit: "순이익", buildClientQuote: "클라이언트 견적서 생성", quoteNo: "견적 번호",
+    validUntil: "유효기한", validNote: "본 견적은 위에 표시된 기한까지 유효합니다.",
+    clientQuoteNote: "클라이언트 견적서에는 최종 가격만 표시되며, 하청 원가와 마진은 숨겨집니다.",
   },
 };
 const T = (lang, k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
@@ -110,10 +136,14 @@ const T = (lang, k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
 /* ════════ trades ════════ */
 const TRADES = [
   { key: "fence", en: "Fencing", ko: "펜스" }, { key: "concrete", en: "Concrete", ko: "콘크리트" },
-  { key: "planting", en: "Planting", ko: "식재" }, { key: "drainage", en: "Drainage", ko: "배수" },
+  { key: "planting", en: "Planting", ko: "식재" }, { key: "mulching", en: "Mulching", ko: "멀칭" },
+  { key: "drainage", en: "Drainage", ko: "배수" },
   { key: "turf", en: "Turf", ko: "잔디" }, { key: "irrigation", en: "Irrigation", ko: "관수" },
   { key: "lighting", en: "Lighting", ko: "조명" }, { key: "paving", en: "Paving", ko: "포장" },
-  { key: "retaining", en: "Retaining Wall", ko: "옹벽" }, { key: "other", en: "Other", ko: "기타" },
+  { key: "retaining", en: "Retaining Wall", ko: "옹벽" },
+  { key: "excavator", en: "Excavator", ko: "굴삭기" },
+  { key: "bobcat", en: "Bobcat Operator", ko: "밥캣 오퍼레이터" },
+  { key: "other", en: "Other", ko: "기타" },
 ];
 const tradeLabel = (key, lang) => {
   const t = TRADES.find((x) => x.key === key) || TRADES[TRADES.length - 1];
@@ -167,11 +197,16 @@ const INDEX_KEY = "li:index";
 const PREFS_KEY = "li:prefs";
 const pKey = (id) => `li:proj:${id}`;
 
-const blankProject = (name) => ({
-  id: uid(), name: name || "New Inspection", client: "", code: "", clientLang: "en",
+const blankProject = (name, mode) => ({
+  id: uid(), name: name || "New Project", mode: mode || "quote", client: "", code: "", clientLang: "en",
   clientEmail: "", lat: null, lng: null, createdAt: iso(), updatedAt: iso(),
   items: [], subs: {}, weather: { status: "idle", days: [] }, floorPlan: null, pins: [],
   signature: null,
+  quoteNo: "", // assigned on first final-quote build
+  validDays: 30, // quote validity, editable per project
+  tradeMargins: {},   // {tradeKey: percent}  overrides default
+  subQuotes: [],      // {id, trade, sub, amount, note, included}
+  myWork: [],         // {id, title, amount, note}  (my own labour/materials)
 });
 const blankItem = () => ({
   id: uid(), title: "", note: "", trade: "other", status: "open", severity: "med", photos: [], ts: iso(),
@@ -179,9 +214,11 @@ const blankItem = () => ({
 });
 const UNITS = ["m", "mm", "m²", "m³", "ea", "hr", "ls", "t"];
 const GST_RATE = 0.10;
+const QUOTE_VALID_DAYS = 30; // default; editable per project
 const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const money = (n) => "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const TEMPLATES_KEY = "li:templates";
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
 const inputStyle = {
   background: C.panel2, border: `1px solid ${C.line}`, color: C.text,
@@ -190,7 +227,8 @@ const inputStyle = {
 
 /* ═══════════════ ROOT ═══════════════ */
 export default function App() {
-  const [prefs, setPrefs] = useState({ lang: "en", company: { name: "My Landscaping Co.", contact: "", logo: null } });
+  const [prefs, setPrefs] = useState({ lang: "en", defaultMargin: 20, quoteCounter: 0,
+    company: { name: "My Landscaping Co.", contact: "", logo: null, email: "" } });
   const [index, setIndex] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [project, setProject] = useState(null);
@@ -216,26 +254,30 @@ export default function App() {
       await store.set(pKey(project.id), updated);
       setIndex((prev) => {
         const next = prev.filter((x) => x.id !== project.id);
-        next.unshift({ id: project.id, name: project.name, updatedAt: updated.updatedAt });
+        next.unshift({ id: project.id, name: project.name, mode: project.mode, updatedAt: updated.updatedAt });
         store.set(INDEX_KEY, next); return next;
       });
     }, 600);
   }, [project, loaded]);
 
   const openProject = async (id) => { const p = await store.get(pKey(id)); if (p) { setProject(p); setScreen("project"); } };
-  const createProject = () => { setProject(blankProject(L === "ko" ? "새 점검" : "New Inspection")); setScreen("project"); };
+  const createProject = (mode) => {
+    const names = { quote: L === "ko" ? "새 견적 방문" : "New Quote Visit",
+      inspect: L === "ko" ? "새 점검" : "New Inspection", final: L === "ko" ? "새 최종 견적" : "New Final Quote" };
+    setProject(blankProject(names[mode] || names.quote, mode)); setScreen("project");
+  };
   const deleteProject = async (id) => { await store.del(pKey(id));
     setIndex((prev) => { const next = prev.filter((x) => x.id !== id); store.set(INDEX_KEY, next); return next; }); };
 
   const saveTemplate = () => {
     if (!project) return;
     const name = window.prompt(T(L, "templateName"), project.name); if (!name) return;
-    const tpl = { id: uid(), name,
+    const tpl = { id: uid(), name, mode: project.mode,
       items: project.items.map((it) => ({ ...blankItem(), title: it.title, trade: it.trade, unit: it.unit, severity: it.severity })) };
     setTemplates((prev) => { const next = [tpl, ...prev]; store.set(TEMPLATES_KEY, next); return next; });
   };
   const useTemplate = (tpl) => {
-    const p = blankProject(tpl.name);
+    const p = blankProject(tpl.name, tpl.mode || "quote");
     p.items = tpl.items.map((it) => ({ ...blankItem(), title: it.title, trade: it.trade, unit: it.unit, severity: it.severity }));
     setProject(p); setScreen("project");
   };
@@ -263,33 +305,53 @@ export default function App() {
         {screen === "settings" && <SettingsScreen prefs={prefs} setPrefs={setPrefs} L={L} />}
         {screen === "list" && <ProjectList index={index} templates={templates} L={L} onOpen={openProject}
           onCreate={createProject} onDelete={deleteProject} onUseTemplate={useTemplate} onDeleteTemplate={deleteTemplate} />}
-        {screen === "project" && project && <ProjectScreen project={project} setProject={setProject} prefs={prefs} L={L} onSaveTemplate={saveTemplate} />}
+        {screen === "project" && project && <ProjectScreen project={project} setProject={setProject} prefs={prefs} setPrefs={setPrefs} L={L} onSaveTemplate={saveTemplate} />}
       </div>
     </div>
   );
 }
 
 /* ═══════════════ Project list ═══════════════ */
+const MODE_META = {
+  quote: { color: "#e0a73a", label: "modeQuote", desc: "quoteVisitDesc" },
+  inspect: { color: "#5cbf72", label: "modeInspect", desc: "inspectDesc" },
+  final: { color: "#5fa8d3", label: "modeFinal", desc: "finalDesc" },
+};
 function ProjectList({ index, templates, L, onOpen, onCreate, onDelete, onUseTemplate, onDeleteTemplate }) {
   return (
     <section style={{ marginTop: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h2 style={{ fontSize: 18, margin: 0 }}>{T(L, "projects")}</h2>
-        <button onClick={onCreate} style={primaryBtn}><Plus size={16} /> {T(L, "newProject")}</button>
+      <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>{T(L, "newProject")}</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginBottom: 22 }}>
+        {["quote", "inspect", "final"].map((m) => (
+          <button key={m} onClick={() => onCreate(m)} style={{ ...card, textAlign: "left", cursor: "pointer",
+            borderLeft: `4px solid ${MODE_META[m].color}`, display: "flex", alignItems: "center", gap: 12 }}>
+            <Plus size={18} style={{ color: MODE_META[m].color }} />
+            <div>
+              <div style={{ fontWeight: 700 }}>{T(L, MODE_META[m].label)}</div>
+              <div style={{ fontSize: 12, color: C.dim }}>{T(L, MODE_META[m].desc)}</div>
+            </div>
+          </button>
+        ))}
       </div>
+
+      <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>{T(L, "projects")}</h2>
       {index.length === 0 ? (
         <div style={{ color: C.dim, textAlign: "center", padding: "40px 0" }}>
           <FolderOpen size={36} style={{ opacity: .4 }} /><p>{T(L, "noProjects")}</p></div>
-      ) : index.map((p) => (
-        <div key={p.id} style={{ ...card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 8 }} onClick={() => onOpen(p.id)}>
-          <ClipboardList size={20} style={{ color: C.green }} />
+      ) : index.map((p) => {
+        const mm = MODE_META[p.mode] || MODE_META.quote;
+        return (
+        <div key={p.id} style={{ ...card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 8,
+          borderLeft: `4px solid ${mm.color}` }} onClick={() => onOpen(p.id)}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600 }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: C.dim }}>{new Date(p.updatedAt).toLocaleString()}</div>
+            <div style={{ fontSize: 12, color: C.dim }}>
+              <span style={{ color: mm.color, fontWeight: 700 }}>{T(L, mm.label)}</span> · {new Date(p.updatedAt).toLocaleString()}</div>
           </div>
           <button onClick={(e) => { e.stopPropagation(); if (window.confirm(T(L, "deleteProj"))) onDelete(p.id); }} style={iconBtn}><Trash2 size={16} /></button>
         </div>
-      ))}
+        );
+      })}
 
       {templates && templates.length > 0 && (
         <div style={{ marginTop: 22 }}>
@@ -344,10 +406,11 @@ function SettingsScreen({ prefs, setPrefs, L }) {
 }
 
 /* ═══════════════ Project screen ═══════════════ */
-function ProjectScreen({ project, setProject, prefs, L, onSaveTemplate }) {
+function ProjectScreen({ project, setProject, prefs, setPrefs, L, onSaveTemplate }) {
   const [editingPhoto, setEditingPhoto] = useState(null);
   const [building, setBuilding] = useState(false);
   const patch = (p) => setProject((prev) => ({ ...prev, ...p }));
+  const mode = project.mode || "quote";
 
   const locate = () => {
     if (!navigator.geolocation) { patch({ weather: { status: "error", days: [] } }); return; }
@@ -387,11 +450,15 @@ function ProjectScreen({ project, setProject, prefs, L, onSaveTemplate }) {
     : { ...it, photos: it.photos.filter((ph) => ph.id !== photoId) }) }));
 
   const buildReport = async (kind, tradeKey) => { setBuilding(true);
-    try { await generateReport({ kind, tradeKey, project, company: prefs.company }); } finally { setBuilding(false); } };
+    try { await generateReport({ kind, tradeKey, project, prefs, setProject, setPrefs }); } finally { setBuilding(false); } };
 
   return (
     <>
       <section style={{ marginTop: 16 }}>
+        <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: C.bg,
+          background: (MODE_META[mode] || MODE_META.quote).color, borderRadius: 6, padding: "3px 10px", marginBottom: 10 }}>
+          {T(L, (MODE_META[mode] || MODE_META.quote).label)}
+        </div>
         <input value={project.name} onChange={(e) => patch({ name: e.target.value })} placeholder={T(L, "projectName")}
           style={{ ...inputStyle, fontSize: 18, fontWeight: 700, marginBottom: 10 }} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -404,47 +471,79 @@ function ProjectScreen({ project, setProject, prefs, L, onSaveTemplate }) {
         </select>
         <input value={project.clientEmail || ""} placeholder={T(L, "clientEmail")} type="email"
           onChange={(e) => patch({ clientEmail: e.target.value })} style={{ ...inputStyle, marginTop: 8 }} />
-        <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <button onClick={locate} style={{ ...inputStyle, width: "auto", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
-            <MapPin size={15} /> {T(L, "getLocation")}</button>
-          <span style={{ fontSize: 13, color: C.dim }}>{project.lat ? `${project.lat.toFixed(4)}, ${project.lng.toFixed(4)}` : T(L, "locationUnset")}</span>
-        </div>
-      </section>
-
-      <WeatherStrip weather={project.weather} L={L} onManual={manualWeek} />
-      <AIAdvice project={project} L={L} />
-      <FloorPlanSection project={project} setProject={setProject} L={L}
-        onEditPhoto={(pinId, photoId) => setEditingPhoto({ pinId, photoId })} />
-
-      <section style={{ marginTop: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <h2 style={{ fontSize: 16, margin: 0 }}>{T(L, "items")} ({project.items.length})</h2>
-          <span style={{ fontSize: 12, color: C.dim }}>{T(L, "byTrade")} · {T(L, "photosGps")}</span>
-        </div>
-        {project.items.map((it, n) => (
-          <ItemCard key={it.id} item={it} n={n} L={L} onChange={(p) => setItem(it.id, p)} onDel={() => delItem(it.id)}
-            onPhoto={(files) => addPhoto(it.id, files)} onEditPhoto={(photoId) => setEditingPhoto({ itemId: it.id, photoId })}
-            onDelPhoto={(photoId) => delPhoto(it.id, photoId)} />
-        ))}
-        <button onClick={addItem} style={{ ...inputStyle, background: C.panel, cursor: "pointer", marginTop: 10,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 600 }}><Plus size={16} /> {T(L, "addItem")}</button>
-        {project.items.length > 0 && (
-          <button onClick={onSaveTemplate} style={{ ...miniAction, marginTop: 8 }}>
-            <ClipboardList size={13} /> {T(L, "saveTemplate")}</button>
+        {mode !== "inspect" && (
+          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 13, color: C.dim, whiteSpace: "nowrap" }}>{T(L, "validUntil")}:</span>
+            <input value={project.validDays ?? 30} inputMode="numeric" onChange={(e) => patch({ validDays: e.target.value })}
+              style={{ ...inputStyle, width: 70, padding: "6px 8px" }} />
+            <span style={{ fontSize: 13, color: C.dim }}>{L === "ko" ? "일" : "days"}</span>
+          </div>
+        )}
+        {/* location/weather only matter for quote (measure) and inspect */}
+        {mode !== "final" && (
+          <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button onClick={locate} style={{ ...inputStyle, width: "auto", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
+              <MapPin size={15} /> {T(L, "getLocation")}</button>
+            <span style={{ fontSize: 13, color: C.dim }}>{project.lat ? `${project.lat.toFixed(4)}, ${project.lng.toFixed(4)}` : T(L, "locationUnset")}</span>
+          </div>
         )}
       </section>
 
-      <TradeQuotes project={project} setProject={setProject} L={L} onBuild={(tk) => buildReport("quote", tk)} />
+      {/* ───── INSPECT MODE ───── */}
+      {mode === "inspect" && <>
+        <WeatherStrip weather={project.weather} L={L} onManual={manualWeek} />
+        <AIAdvice project={project} L={L} />
+        <FloorPlanSection project={project} setProject={setProject} L={L}
+          onEditPhoto={(pinId, photoId) => setEditingPhoto({ pinId, photoId })} />
+      </>}
 
-      <EstimateSummary project={project} L={L} />
-      <SignatureSection project={project} setProject={setProject} L={L} />
+      {/* ───── QUOTE + INSPECT: item list ───── */}
+      {mode !== "final" && (
+        <section style={{ marginTop: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+            <h2 style={{ fontSize: 16, margin: 0 }}>{T(L, "items")} ({project.items.length})</h2>
+            <span style={{ fontSize: 12, color: C.dim }}>{T(L, "byTrade")} · {T(L, "photosGps")}</span>
+          </div>
+          {project.items.map((it, n) => (
+            <ItemCard key={it.id} item={it} n={n} L={L} mode={mode} onChange={(p) => setItem(it.id, p)} onDel={() => delItem(it.id)}
+              onPhoto={(files) => addPhoto(it.id, files)} onEditPhoto={(photoId) => setEditingPhoto({ itemId: it.id, photoId })}
+              onDelPhoto={(photoId) => delPhoto(it.id, photoId)} />
+          ))}
+          <button onClick={addItem} style={{ ...inputStyle, background: C.panel, cursor: "pointer", marginTop: 10,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 600 }}><Plus size={16} /> {T(L, "addItem")}</button>
+          {project.items.length > 0 && (
+            <button onClick={onSaveTemplate} style={{ ...miniAction, marginTop: 8 }}>
+              <ClipboardList size={13} /> {T(L, "saveTemplate")}</button>
+          )}
+        </section>
+      )}
 
-      <section style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <button onClick={() => buildReport("quote")} disabled={building} style={{ ...bigBtn, background: C.amber }}>
-          {building ? <Loader2 size={18} className="spin" /> : <FileDown size={18} />} {T(L, "fullQuote")}</button>
-        <button onClick={() => buildReport("progress")} disabled={building} style={{ ...bigBtn, background: C.green }}>
-          {building ? <Loader2 size={18} className="spin" /> : <FileDown size={18} />} {T(L, "progressReport")}</button>
-      </section>
+      {/* ───── QUOTE MODE: send quantity-only requests to subs + estimate ───── */}
+      {mode === "quote" && <>
+        <TradeQuotes project={project} setProject={setProject} L={L} onBuild={(tk) => buildReport("quote", tk)} />
+        <EstimateSummary project={project} L={L} />
+        <section style={{ marginTop: 18 }}>
+          <button onClick={() => buildReport("quote")} disabled={building} style={{ ...bigBtn, background: C.amber, width: "100%" }}>
+            {building ? <Loader2 size={18} className="spin" /> : <FileDown size={18} />} {T(L, "fullQuote")}</button>
+        </section>
+      </>}
+
+      {/* ───── FINAL QUOTE MODE ───── */}
+      {mode === "final" && (
+        <FinalQuote project={project} setProject={setProject} prefs={prefs} setPrefs={setPrefs} L={L}
+          onBuild={() => buildReport("client")} building={building} />
+      )}
+
+      {/* ───── INSPECT MODE: signature + progress report ───── */}
+      {mode === "inspect" && <>
+        <SignatureSection project={project} setProject={setProject} L={L} />
+        <section style={{ marginTop: 18 }}>
+          <button onClick={() => buildReport("progress")} disabled={building} style={{ ...bigBtn, background: C.green, width: "100%" }}>
+            {building ? <Loader2 size={18} className="spin" /> : <FileDown size={18} />} {T(L, "progressReport")}</button>
+        </section>
+      </>}
+
+      {/* shared: email + csv */}
       <section style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <button onClick={() => emailReport(project, prefs)} style={{ ...inputStyle, background: C.panel, cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontWeight: 600 }}>
@@ -460,6 +559,129 @@ function ProjectScreen({ project, setProject, prefs, L, onSaveTemplate }) {
           else savePinPhoto(setProject, editingPhoto.pinId, editingPhoto.photoId, dataUrl); setEditingPhoto(null); }} />}
     </>
   );
+}
+
+/* ═══════════════ Final quote mode (margins, sub selection, profit) ═══════════════ */
+function FinalQuote({ project, setProject, prefs, setPrefs, L, onBuild, building }) {
+  const patch = (p) => setProject((prev) => ({ ...prev, ...p }));
+  const defMargin = prefs.defaultMargin ?? 20;
+  const subs = project.subQuotes || [];
+  const myWork = project.myWork || [];
+  const tradeMargins = project.tradeMargins || {};
+
+  const addSub = () => patch({ subQuotes: [...subs, { id: uid(), trade: "fence", sub: "", amount: "", note: "", included: true }] });
+  const setSub = (id, p) => patch({ subQuotes: subs.map((s) => s.id === id ? { ...s, ...p } : s) });
+  const delSub = (id) => patch({ subQuotes: subs.filter((s) => s.id !== id) });
+  const addWork = () => patch({ myWork: [...myWork, { id: uid(), title: "", amount: "", note: "" }] });
+  const setWork = (id, p) => patch({ myWork: myWork.map((w) => w.id === id ? { ...w, ...p } : w) });
+  const delWork = (id) => patch({ myWork: myWork.filter((w) => w.id !== id) });
+  const marginFor = (trade) => tradeMargins[trade] != null && tradeMargins[trade] !== "" ? num(tradeMargins[trade]) : defMargin;
+
+  // calc
+  let subCost = 0, subClient = 0;
+  subs.filter((s) => s.included).forEach((s) => {
+    const c = num(s.amount); subCost += c; subClient += c * (1 + marginFor(s.trade) / 100);
+  });
+  const workCost = myWork.reduce((sum, w) => sum + num(w.amount), 0);
+  const cost = subCost + workCost;
+  const clientEx = subClient + workCost; // my own work passed at cost (no margin); change if needed
+  const marginAmt = clientEx - cost;
+  const gst = clientEx * GST_RATE;
+
+  const usedTrades = [...new Set(subs.map((s) => s.trade))];
+
+  return (
+    <>
+      {/* default margin */}
+      <section style={{ ...card, marginTop: 16 }}>
+        <label style={{ ...lbl, marginTop: 0 }}>{T(L, "defaultMargin")}</label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input value={prefs.defaultMargin ?? 20} inputMode="decimal"
+            onChange={(e) => setPrefs({ ...prefs, defaultMargin: e.target.value })}
+            style={{ ...inputStyle, width: 90 }} /><span style={{ color: C.dim }}>%</span>
+        </div>
+      </section>
+
+      {/* sub quotes */}
+      <section style={{ marginTop: 18 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 4 }}>{T(L, "subQuotes")}</h2>
+        {subs.map((s) => (
+          <div key={s.id} style={{ ...card, marginBottom: 8, opacity: s.included ? 1 : 0.5 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={s.included} onChange={(e) => setSub(s.id, { included: e.target.checked })}
+                style={{ width: 18, height: 18, accentColor: C.green }} />
+              <select value={s.trade} onChange={(e) => setSub(s.id, { trade: e.target.value })}
+                style={{ ...inputStyle, flex: "0 0 130px", padding: "6px 8px" }}>
+                {TRADES.map((t) => <option key={t.key} value={t.key}>{tradeLabel(t.key, L)}</option>)}
+              </select>
+              <input value={s.sub} onChange={(e) => setSub(s.id, { sub: e.target.value })} placeholder={T(L, "subName")}
+                style={{ ...inputStyle, flex: 1, padding: "6px 8px" }} />
+              <button onClick={() => delSub(s.id)} style={iconBtn}><Trash2 size={15} /></button>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: C.dim }}>{T(L, "subAmount")}</span>
+              <input value={s.amount} inputMode="decimal" onChange={(e) => setSub(s.id, { amount: e.target.value })} placeholder="0.00"
+                style={{ ...inputStyle, width: 110, padding: "6px 8px" }} />
+              <span style={{ fontSize: 12, color: C.dim }}>{tradeLabel(s.trade, L)} {T(L, "tradeMargin")}:</span>
+              <input value={tradeMargins[s.trade] ?? ""} inputMode="decimal" placeholder={String(defMargin)}
+                onChange={(e) => patch({ tradeMargins: { ...tradeMargins, [s.trade]: e.target.value } })}
+                style={{ ...inputStyle, width: 64, padding: "6px 8px" }} />
+              <span style={{ fontSize: 13, color: C.green, fontWeight: 700 }}>
+                → {money(num(s.amount) * (1 + marginFor(s.trade) / 100))}</span>
+            </div>
+            <input value={s.note} onChange={(e) => setSub(s.id, { note: e.target.value })} placeholder={T(L, "subMemo")}
+              style={{ ...inputStyle, marginTop: 8, padding: "6px 8px", fontSize: 13 }} />
+          </div>
+        ))}
+        <button onClick={addSub} style={{ ...inputStyle, background: C.panel, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 600 }}><Plus size={16} /> {T(L, "addSubQuote")}</button>
+      </section>
+
+      {/* my own work */}
+      <section style={{ marginTop: 18 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 4 }}>{T(L, "myWork")}</h2>
+        {myWork.map((w) => (
+          <div key={w.id} style={{ ...card, marginBottom: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input value={w.title} onChange={(e) => setWork(w.id, { title: e.target.value })} placeholder={T(L, "workTitle")}
+              style={{ ...inputStyle, flex: 1, minWidth: 140, padding: "6px 8px" }} />
+            <input value={w.amount} inputMode="decimal" onChange={(e) => setWork(w.id, { amount: e.target.value })} placeholder={T(L, "workAmount")}
+              style={{ ...inputStyle, width: 110, padding: "6px 8px" }} />
+            <button onClick={() => delWork(w.id)} style={iconBtn}><Trash2 size={15} /></button>
+          </div>
+        ))}
+        <button onClick={addWork} style={{ ...inputStyle, background: C.panel, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 600 }}><Plus size={16} /> {T(L, "addMyWork")}</button>
+      </section>
+
+      {/* profit summary (internal only) */}
+      {clientEx > 0 && (
+        <section style={{ ...card, marginTop: 18, borderLeft: `4px solid ${C.amber}` }}>
+          <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>{T(L, "profitSummary")} <span style={{ fontSize: 11, color: C.dim }}>(internal)</span></h2>
+          <Row label={T(L, "cost")} val={money(cost)} dim />
+          <Row label={T(L, "marginAmt")} val={money(marginAmt)} color={C.amber} />
+          <Row label={T(L, "clientPrice")} val={money(clientEx)} />
+          <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 8, paddingTop: 8 }}>
+            <Row label={T(L, "gst")} val={money(gst)} dim />
+            <Row label={T(L, "total")} val={money(clientEx + gst)} big color={C.green} />
+            <Row label={T(L, "netProfit")} val={money(marginAmt)} color={C.amber} />
+          </div>
+        </section>
+      )}
+
+      <p style={{ color: C.dim, fontSize: 12, marginTop: 12 }}>{T(L, "clientQuoteNote")}</p>
+      <section style={{ marginTop: 8 }}>
+        <button onClick={onBuild} disabled={building || clientEx <= 0} style={{ ...bigBtn, background: C.blue, width: "100%",
+          opacity: clientEx <= 0 ? 0.5 : 1 }}>
+          {building ? <Loader2 size={18} className="spin" /> : <FileDown size={18} />} {T(L, "buildClientQuote")}</button>
+      </section>
+    </>
+  );
+}
+function Row({ label, val, dim, big, color }) {
+  return <div style={{ display: "flex", justifyContent: "space-between", padding: big ? "6px 0" : "3px 0",
+    fontSize: big ? 17 : 14, fontWeight: big ? 800 : 400 }}>
+    <span style={{ color: dim ? C.dim : C.text }}>{label}</span>
+    <span style={{ color: color || C.text, fontWeight: color || big ? 700 : 400 }}>{val}</span></div>;
 }
 
 /* ═══════════════ Estimate summary (per-trade subtotal + GST) ═══════════════ */
@@ -679,7 +901,7 @@ function FloorPlanSection({ project, setProject, L, onEditPhoto }) {
 }
 
 /* ═══════════════ Item card ═══════════════ */
-function ItemCard({ item, n, L, onChange, onDel, onPhoto, onEditPhoto, onDelPhoto }) {
+function ItemCard({ item, n, L, mode, onChange, onDel, onPhoto, onEditPhoto, onDelPhoto }) {
   const STATUS = { open: C.red, prog: C.amber, done: C.green };
   const SEV = { high: C.red, med: C.amber, low: C.blue };
   return (
@@ -694,33 +916,35 @@ function ItemCard({ item, n, L, onChange, onDel, onPhoto, onEditPhoto, onDelPhot
         <Tag size={14} style={{ color: C.dim }} />
         {TRADES.map((t) => <button key={t.key} onClick={() => onChange({ trade: t.key })} style={chip(item.trade === t.key, C.green)}>{tradeLabel(t.key, L)}</button>)}
       </div>
-      <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: C.dim }}>{T(L, "status")}:</span>
-          {["open", "prog", "done"].map((s) => <button key={s} onClick={() => onChange({ status: s })} style={chip(item.status === s, STATUS[s])}>
-            {T(L, s === "open" ? "st_open" : s === "prog" ? "st_prog" : "st_done")}</button>)}
+      {mode === "inspect" && (
+        <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.dim }}>{T(L, "status")}:</span>
+            {["open", "prog", "done"].map((s) => <button key={s} onClick={() => onChange({ status: s })} style={chip(item.status === s, STATUS[s])}>
+              {T(L, s === "open" ? "st_open" : s === "prog" ? "st_prog" : "st_done")}</button>)}
+          </div>
+          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.dim }}>{T(L, "severity")}:</span>
+            {["high", "med", "low"].map((s) => <button key={s} onClick={() => onChange({ severity: s })} style={chip(item.severity === s, SEV[s])}>
+              {T(L, s === "high" ? "sv_high" : s === "med" ? "sv_med" : "sv_low")}</button>)}
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: C.dim }}>{T(L, "severity")}:</span>
-          {["high", "med", "low"].map((s) => <button key={s} onClick={() => onChange({ severity: s })} style={chip(item.severity === s, SEV[s])}>
-            {T(L, s === "high" ? "sv_high" : s === "med" ? "sv_med" : "sv_low")}</button>)}
-        </div>
-      </div>
+      )}
       <div style={{ marginTop: 8 }}>
         <NoteWithVoiceAI value={item.note} onChange={(v) => onChange({ note: v })} L={L} placeholder={T(L, "siteNote")} photoForAnalysis={item.photos[0]} />
       </div>
-      <QtyRow item={item} L={L} onChange={onChange} />
+      <QtyRow item={item} L={L} mode={mode} onChange={onChange} />
       <PhotoRow photos={item.photos} L={L} onAdd={onPhoto} onEdit={onEditPhoto} onDel={onDelPhoto} />
     </div>
   );
 }
 
 /* ═══════════════ Qty / unit / rate row ═══════════════ */
-function QtyRow({ item, L, onChange }) {
+function QtyRow({ item, L, mode, onChange }) {
   const [pickOpen, setPickOpen] = useState(false);
-  // collect measured dims from this item's photos
   const dims = item.photos.flatMap((p) => p.dims || []);
   const lineTotal = num(item.qty) * num(item.rate);
+  const showRate = mode !== "quote"; // quote-to-sub: quantities only
   return (
     <div style={{ marginTop: 10, background: C.panel2, borderRadius: 9, padding: "8px 10px" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -736,16 +960,18 @@ function QtyRow({ item, L, onChange }) {
             {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", flex: "1 1 80px" }}>
-          <span style={{ fontSize: 10, color: C.dim }}>{T(L, "rate")} ($)</span>
-          <input value={item.rate} onChange={(e) => onChange({ rate: e.target.value })} inputMode="decimal" placeholder="0.00"
-            style={{ ...inputStyle, padding: "6px 8px", fontSize: 13 }} />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", flex: "1 1 80px" }}>
-          <span style={{ fontSize: 10, color: C.dim }}>{T(L, "lineTotal")}</span>
-          <span style={{ fontWeight: 700, fontSize: 14, padding: "6px 0", color: lineTotal ? C.green : C.dim }}>
-            {lineTotal ? money(lineTotal) : "—"}</span>
-        </div>
+        {showRate && <>
+          <div style={{ display: "flex", flexDirection: "column", flex: "1 1 80px" }}>
+            <span style={{ fontSize: 10, color: C.dim }}>{T(L, "rate")} ($)</span>
+            <input value={item.rate} onChange={(e) => onChange({ rate: e.target.value })} inputMode="decimal" placeholder="0.00"
+              style={{ ...inputStyle, padding: "6px 8px", fontSize: 13 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: "1 1 80px" }}>
+            <span style={{ fontSize: 10, color: C.dim }}>{T(L, "lineTotal")}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, padding: "6px 0", color: lineTotal ? C.green : C.dim }}>
+              {lineTotal ? money(lineTotal) : "—"}</span>
+          </div>
+        </>}
       </div>
       {dims.length > 0 && (
         <div style={{ marginTop: 6 }}>
@@ -933,68 +1159,132 @@ function TBtn({ on, active, icon: Icon, label }) {
 }
 
 /* ═══════════════ Report generation (AI translation) ═══════════════ */
-async function generateReport({ kind, tradeKey, project, company }) {
-  const isQuote = kind === "quote";
+async function generateReport({ kind, tradeKey, project, prefs, setProject, setPrefs }) {
+  const company = prefs.company;
+  const isQuote = kind === "quote";       // request TO subcontractor: quantities only, no prices
+  const isProgress = kind === "progress"; // inspection update to client
+  const isClient = kind === "client";     // final quote to client: margins applied, subs hidden
   const targetLang = isQuote ? "en" : project.clientLang;
   const reportItems = tradeKey ? project.items.filter((it) => it.trade === tradeKey) : project.items;
   const sub = tradeKey ? project.subs[tradeKey] : "";
+
+  // assign a quote number on first client-quote build
+  let quoteNo = project.quoteNo;
+  if (isClient && !quoteNo) {
+    const n = (prefs.quoteCounter || 0) + 1;
+    const yr = new Date().getFullYear();
+    quoteNo = `Q-${yr}-${String(n).padStart(3, "0")}`;
+    setPrefs && setPrefs({ ...prefs, quoteCounter: n });
+    setProject && setProject((prev) => ({ ...prev, quoteNo }));
+  }
+  const validDays = num(project.validDays) || 30;
+  const validUntilStr = addDays(new Date(), validDays).toLocaleDateString();
+
   const labels = {
-    heading: isQuote ? "Quote Request" : "Site Progress Report", scope: isQuote ? "Work Items" : "Inspection / Progress Items",
-    subtitleQuote: "We request a quote for the items below.", subtitleProg: "Here is an update on site progress.",
+    heading: isClient ? "Quotation" : isQuote ? "Quote Request" : "Site Progress Report",
+    scope: isQuote ? "Work Items (please quote)" : isClient ? "Quotation" : "Inspection / Progress Items",
+    subtitleQuote: "We request a quote for the items below.",
+    subtitleProg: "Here is an update on site progress.",
+    subtitleClient: "Thank you for the opportunity to quote. Please see our quotation below.",
     project: "Project", client: isQuote ? "Principal" : "Client", recipient: "Quote requested from",
     location: "Site location", date: "Date", trade: "Trade", weather: "Weekly Weather",
     weatherNote: "Days marked in blue had rainfall, which may have delayed work.",
     open: "Open", prog: "In Progress", done: "Done", high: "Urgent", med: "Attention", low: "Minor",
     generated: "Generated", defects: "Defect Locations (floor plan)",
     qty: "Qty", rate: "Rate", line: "Amount", subtotal: "Subtotal (ex GST)", gst: "GST (10%)",
-    total: "Total (inc GST)", signature: "Client acceptance / signature", estimateNote: "Quantities and rates are estimates and subject to site confirmation.",
+    total: "Total (inc GST)", signature: "For and on behalf of", estimateNote: "Quantities are estimates and subject to site confirmation.",
+    quoteNo: "Quote No.", validUntil: "Valid until", validNote: "This quotation is valid until the date shown above.",
+    item: "Item", amount: "Amount",
   };
+  // For sub-quote requests: quantities only, no money. For client quote: build from margins.
   const itemTexts = reportItems.map((it) => ({ title: it.title, note: it.note }));
   const pinTexts = project.pins.map((p) => p.note);
-  let TL = labels, items2 = itemTexts, pins2 = pinTexts;
+
+  // client quote line items (trade → client price with margin)
+  const defMargin = prefs.defaultMargin ?? 20;
+  const tradeMargins = project.tradeMargins || {};
+  const marginFor = (tr) => tradeMargins[tr] != null && tradeMargins[tr] !== "" ? num(tradeMargins[tr]) : defMargin;
+  const clientLines = [];
+  if (isClient) {
+    (project.subQuotes || []).filter((s) => s.included).forEach((s) => {
+      clientLines.push({ label: tradeLabel(s.trade, "en"), note: s.note, amount: num(s.amount) * (1 + marginFor(s.trade) / 100) });
+    });
+    (project.myWork || []).forEach((w) => { clientLines.push({ label: w.title || "Work", note: w.note, amount: num(w.amount) }); });
+  }
+  const clientLineTexts = clientLines.map((l) => ({ label: l.label, note: l.note || "" }));
+
+  let TL = labels, items2 = itemTexts, pins2 = pinTexts, lines2 = clientLineTexts;
   if (targetLang && targetLang !== "en") {
-    const payload = JSON.stringify({ labels, items: itemTexts, pins: pinTexts });
+    const payload = JSON.stringify({ labels, items: itemTexts, pins: pinTexts, lines: clientLineTexts });
     const out = await askClaude(`Translate ALL string values in this JSON to ${langEnglishName[targetLang]}, using natural professional landscaping/construction terminology. Keep JSON structure and keys identical. Output ONLY the JSON, no markdown:\n\n${payload}`,
       "You are a professional translator for landscape construction documents. Output valid JSON only.");
     try { const parsed = JSON.parse(out.replace(/```json|```/g, "").trim());
-      if (parsed.labels) TL = { ...labels, ...parsed.labels }; if (parsed.items) items2 = parsed.items; if (parsed.pins) pins2 = parsed.pins;
+      if (parsed.labels) TL = { ...labels, ...parsed.labels }; if (parsed.items) items2 = parsed.items;
+      if (parsed.pins) pins2 = parsed.pins; if (parsed.lines) lines2 = parsed.lines;
     } catch {}
   }
   const esc = (s) => String(s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-  const accent = isQuote ? "#e0a73a" : "#3c8a50";
+  const accent = isClient ? "#5fa8d3" : isQuote ? "#e0a73a" : "#3c8a50";
   const sevMap = { high: TL.high, med: TL.med, low: TL.low };
   const stMap = { open: TL.open, prog: TL.prog, done: TL.done };
-  const wxHtml = !isQuote && project.weather.days.length ? `<h2>${esc(TL.weather)}</h2>
+  const wxHtml = isProgress && project.weather.days.length ? `<h2>${esc(TL.weather)}</h2>
     <div class="wx">${project.weather.days.map((d) => { const w = WX(d.code);
       return `<div class="wxd${d.rain > 1 ? " rain" : ""}"><div class="dow">${d.dow}</div><div class="wl">${w.label}</div>
       <div class="tp">${d.tmax}° / ${d.tmin}°</div><div class="rn">${d.rain > 0 ? d.rain.toFixed(1) + "mm" : ""}</div></div>`; }).join("")}</div>
     <p class="hint">${esc(TL.weatherNote)}</p>` : "";
-  const itemsHtml = reportItems.map((it, n) => {
-    const photos = it.photos.map((ph) => `<img src="${ph.annotated || ph.src}" />`).join("");
-    const t = items2[n] || { title: it.title, note: it.note };
-    const badges = !isQuote ? `<span class="b" style="background:#eef3ee;color:#3c8a50">${esc(stMap[it.status] || it.status)}</span>
-      <span class="b" style="background:#fdf0e6;color:#c47d1a">${esc(sevMap[it.severity] || it.severity)}</span>` : "";
-    const lt = num(it.qty) * num(it.rate);
-    const qtyLine = num(it.qty) ? `<div class="ql">${esc(TL.qty)}: ${esc(it.qty)} ${esc(it.unit)}` +
-      (num(it.rate) ? ` &nbsp;·&nbsp; ${esc(TL.rate)}: ${money(num(it.rate))} &nbsp;·&nbsp; <b>${esc(TL.line)}: ${money(lt)}</b>` : "") + `</div>` : "";
-    return `<div class="item"><div class="ititle">${n + 1}. ${esc(t.title) || "—"}
-      <span class="cat">${esc(tradeLabel(it.trade, "en"))}</span> ${badges}</div>
-      ${qtyLine}${t.note ? `<p>${esc(t.note)}</p>` : ""}${photos ? `<div class="photos">${photos}</div>` : ""}</div>`;
-  }).join("");
 
-  const subtotal = reportItems.reduce((s, it) => s + num(it.qty) * num(it.rate), 0);
-  const totalsHtml = subtotal > 0 ? `<div class="totals">
-    <div><span>${esc(TL.subtotal)}</span><span>${money(subtotal)}</span></div>
-    <div><span>${esc(TL.gst)}</span><span>${money(subtotal * GST_RATE)}</span></div>
-    <div class="grand"><span>${esc(TL.total)}</span><span>${money(subtotal * (1 + GST_RATE))}</span></div>
-    <p class="hint">${esc(TL.estimateNote)}</p></div>` : "";
-  const sigHtml = !isQuote && project.signature ? `<h2>${esc(TL.signature)}</h2>
-    <img class="sig" src="${project.signature}" /><div class="sigline">${esc(project.client) || ""}</div>` : "";
-  const planHtml = !isQuote && project.floorPlan ? `<h2>${esc(TL.defects)}</h2>
+  let bodyHtml = "", totalsHtml = "";
+  if (isClient) {
+    // ── final client quote: only labels + client prices (margins & sub names hidden) ──
+    bodyHtml = clientLines.map((l, n) => {
+      const t = lines2[n] || { label: l.label, note: l.note };
+      return `<div class="item"><div class="ititle">${n + 1}. ${esc(t.label)}</div>
+        ${t.note ? `<p>${esc(t.note)}</p>` : ""}<div class="ql"><b>${esc(TL.amount)}: ${money(l.amount)}</b></div></div>`;
+    }).join("");
+    const sub = clientLines.reduce((s, l) => s + l.amount, 0);
+    totalsHtml = `<div class="totals">
+      <div><span>${esc(TL.subtotal)}</span><span>${money(sub)}</span></div>
+      <div><span>${esc(TL.gst)}</span><span>${money(sub * GST_RATE)}</span></div>
+      <div class="grand"><span>${esc(TL.total)}</span><span>${money(sub * (1 + GST_RATE))}</span></div>
+      <p class="hint">${esc(TL.validNote)}</p></div>`;
+  } else {
+    // ── sub request (qty only) or progress (qty + price) ──
+    bodyHtml = reportItems.map((it, n) => {
+      const photos = it.photos.map((ph) => `<img src="${ph.annotated || ph.src}" />`).join("");
+      const t = items2[n] || { title: it.title, note: it.note };
+      const badges = isProgress ? `<span class="b" style="background:#eef3ee;color:#3c8a50">${esc(stMap[it.status] || it.status)}</span>
+        <span class="b" style="background:#fdf0e6;color:#c47d1a">${esc(sevMap[it.severity] || it.severity)}</span>` : "";
+      // quote-to-sub: quantity only, NEVER price. progress: show price if present.
+      let qtyLine = "";
+      if (num(it.qty)) {
+        if (isQuote) qtyLine = `<div class="ql">${esc(TL.qty)}: ${esc(it.qty)} ${esc(it.unit)}</div>`;
+        else { const lt = num(it.qty) * num(it.rate);
+          qtyLine = `<div class="ql">${esc(TL.qty)}: ${esc(it.qty)} ${esc(it.unit)}` +
+            (num(it.rate) ? ` &nbsp;·&nbsp; ${esc(TL.rate)}: ${money(num(it.rate))} &nbsp;·&nbsp; <b>${esc(TL.line)}: ${money(lt)}</b>` : "") + `</div>`; }
+      }
+      return `<div class="item"><div class="ititle">${n + 1}. ${esc(t.title) || "—"}
+        <span class="cat">${esc(tradeLabel(it.trade, "en"))}</span> ${badges}</div>
+        ${qtyLine}${t.note ? `<p>${esc(t.note)}</p>` : ""}${photos ? `<div class="photos">${photos}</div>` : ""}</div>`;
+    }).join("");
+    // totals: progress only (sub requests carry no prices)
+    if (isProgress) {
+      const subtotal = reportItems.reduce((s, it) => s + num(it.qty) * num(it.rate), 0);
+      if (subtotal > 0) totalsHtml = `<div class="totals">
+        <div><span>${esc(TL.subtotal)}</span><span>${money(subtotal)}</span></div>
+        <div><span>${esc(TL.gst)}</span><span>${money(subtotal * GST_RATE)}</span></div>
+        <div class="grand"><span>${esc(TL.total)}</span><span>${money(subtotal * (1 + GST_RATE))}</span></div></div>`;
+    }
+  }
+
+  const sigHtml = (isProgress || isClient) && project.signature ? `<h2>${esc(TL.signature)} ${esc(company.name)}</h2>
+    <img class="sig" src="${project.signature}" /><div class="sigline">${esc(company.name)}</div>` : "";
+  const planHtml = isProgress && project.floorPlan ? `<h2>${esc(TL.defects)}</h2>
     <div class="plan"><img src="${project.floorPlan}" />${project.pins.map((p, i) => `<span class="pin" style="left:${p.x}%;top:${p.y}%">${i + 1}</span>`).join("")}</div>
     <ol class="pinlist">${project.pins.map((p, i) => `<li>${esc(pins2[i] || p.note || "—")}</li>`).join("")}</ol>` : "";
   const logoHtml = company.logo ? `<img class="logo" src="${company.logo}" />` : "";
   const loc = project.lat ? `${project.lat.toFixed(4)}, ${project.lng.toFixed(4)}` : "—";
+  const subtitle = isClient ? TL.subtitleClient : isQuote ? TL.subtitleQuote : TL.subtitleProg;
+  const badgeTxt = isClient ? "QUOTATION" : isQuote ? "QUOTE REQUEST" : "PROGRESS";
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(project.name)} — ${esc(TL.heading)}</title>
     <style>body{font-family:-apple-system,'Malgun Gothic',sans-serif;color:#1d241e;max-width:880px;margin:0 auto;padding:40px 28px;line-height:1.55}
     header{display:flex;align-items:center;gap:16px;border-bottom:4px solid ${accent};padding-bottom:14px}.logo{height:54px;object-fit:contain}
@@ -1019,17 +1309,19 @@ async function generateReport({ kind, tradeKey, project, company }) {
     .totals .hint{text-align:right}
     .sig{height:80px;background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:6px}.sigline{border-top:1px solid #333;width:240px;margin-top:6px;font-size:13px;color:#555}
     @media print{body{padding:0}}</style></head><body>
-    <header>${logoHtml}<div class="co">${esc(company.name)}<small>${esc(company.contact)}</small></div><div class="badge">${isQuote ? "QUOTE" : "PROGRESS"}</div></header>
+    <header>${logoHtml}<div class="co">${esc(company.name)}<small>${esc(company.contact)}</small></div><div class="badge">${badgeTxt}</div></header>
     <h1>${esc(TL.heading)}${tradeKey ? ` — ${esc(tradeLabel(tradeKey, "en"))}` : ""}</h1>
-    <p class="sub">${esc(isQuote ? TL.subtitleQuote : TL.subtitleProg)}</p>
+    <p class="sub">${esc(subtitle)}</p>
     <div class="meta"><div><b>${esc(TL.project)}</b> ${esc(project.name)}</div><div><b>${esc(TL.client)}</b> ${esc(project.client) || "—"}</div>
     ${isQuote && sub ? `<div><b>${esc(TL.recipient)}</b> ${esc(sub)}</div>` : ""}${tradeKey ? `<div><b>${esc(TL.trade)}</b> ${esc(tradeLabel(tradeKey, "en"))}</div>` : ""}
-    <div><b>${esc(TL.location)}</b> ${loc}</div><div><b>${esc(TL.date)}</b> ${new Date(project.updatedAt).toLocaleString()}</div></div>
-    ${wxHtml}<h2>${esc(TL.scope)} (${reportItems.length})</h2>${itemsHtml || "<p>—</p>"}${totalsHtml}${planHtml}${sigHtml}
+    ${isClient ? `<div><b>${esc(TL.quoteNo)}</b> ${esc(quoteNo)}</div><div><b>${esc(TL.validUntil)}</b> ${esc(validUntilStr)}</div>` : ""}
+    <div><b>${esc(TL.location)}</b> ${loc}</div><div><b>${esc(TL.date)}</b> ${new Date(project.updatedAt).toLocaleDateString()}</div></div>
+    ${wxHtml}<h2>${esc(TL.scope)}${!isClient ? ` (${reportItems.length})` : ""}</h2>${bodyHtml || "<p>—</p>"}${totalsHtml}${planHtml}${sigHtml}
     <footer>${esc(company.name)} · ${esc(TL.generated)} ${new Date().toLocaleString()}</footer></body></html>`;
   const blob = new Blob([html], { type: "text/html" }); const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url;
-  a.download = `${project.name}_${isQuote ? "quote" + (tradeKey ? "_" + tradeKey : "") : "progress"}.html`; a.click(); URL.revokeObjectURL(url);
+  const fnameKind = isClient ? "quotation" : isQuote ? "quote_request" + (tradeKey ? "_" + tradeKey : "") : "progress";
+  a.download = `${project.name}_${fnameKind}.html`; a.click(); URL.revokeObjectURL(url);
 }
 
 /* ════════ shared styles ════════ */
