@@ -41,7 +41,7 @@ const I18N = {
     logo: "Logo", projectName: "Project Name", client: "Client", code: "Project Code",
     clientLang: "Client report language", getLocation: "Get Location + Weather",
     locationUnset: "Location not set", weather: "Weekly Weather", manual: "manual",
-    weekHint: "Mon–Sun · rainy days marked", weatherFail: "Couldn't load weather automatically.",
+    weekHint: "Mon–Sun · °C · rain mm · wind km/h", weatherFail: "Couldn't load weather automatically.",
     enterManual: "Enter manually", aiAdvice: "AI Site / Quote Advice",
     askPlaceholder: "e.g. What planting suits this slope? What's easy to miss when quoting this?",
     getAdvice: "Get advice", items: "Inspection Items", byTrade: "grouped by trade",
@@ -81,6 +81,14 @@ const I18N = {
     netProfit: "Net Profit", buildClientQuote: "Build Client Quote", quoteNo: "Quote No.",
     validUntil: "Valid until", validNote: "This quote is valid for the period shown above.",
     clientQuoteNote: "Client quote shows final prices only — subcontractor costs and margins are hidden.",
+    jobs: "Jobs", newJob: "New Job", searchJobs: "Search jobs (name, client, job no.)",
+    noJobs: "No jobs yet — create one to start.", noMatch: "No matching jobs.",
+    jobName: "Job / site name", address: "Address", stages: "Stages", noStages: "No stages yet. Add one below.",
+    addStage: "Add stage", deleteJob: "Delete this job?", deleteStage: "Delete this stage?",
+    markDone: "Mark done", done: "Done", itemCount2: "items",
+    locDenied: "Location permission is off. Enable it in Settings → Safari → Location.",
+    locTimeout: "Location timed out. Try again or enter weather manually.",
+    locFailed: "Couldn't get location.", windHint: "wind km/h · rain/wind days flagged",
   },
   ko: {
     projects: "프로젝트", newProject: "새 프로젝트", noProjects: "프로젝트가 없습니다 — 새로 만들어 시작하세요.",
@@ -89,7 +97,7 @@ const I18N = {
     logo: "로고", projectName: "프로젝트명", client: "클라이언트", code: "프로젝트 코드",
     clientLang: "클라이언트 보고서 언어", getLocation: "위치 + 날씨 가져오기",
     locationUnset: "위치 미설정", weather: "주간 날씨", manual: "수동",
-    weekHint: "월~일 · 비 온 날 표시", weatherFail: "자동 날씨를 불러오지 못했어요.",
+    weekHint: "월~일 · 온도 · 비 mm · 바람 km/h", weatherFail: "자동 날씨를 불러오지 못했어요.",
     enterManual: "수동 입력", aiAdvice: "AI 현장·견적 조언",
     askPlaceholder: "예: 이 경사면에 맞는 식재는? 이 견적에서 빠뜨리기 쉬운 항목은?",
     getAdvice: "조언 받기", items: "점검 항목", byTrade: "공종별 분류",
@@ -129,6 +137,14 @@ const I18N = {
     netProfit: "순이익", buildClientQuote: "클라이언트 견적서 생성", quoteNo: "견적 번호",
     validUntil: "유효기한", validNote: "본 견적은 위에 표시된 기한까지 유효합니다.",
     clientQuoteNote: "클라이언트 견적서에는 최종 가격만 표시되며, 하청 원가와 마진은 숨겨집니다.",
+    jobs: "잡 (현장)", newJob: "새 잡", searchJobs: "검색 (현장명, 클라이언트, 잡번호)",
+    noJobs: "잡이 없습니다 — 새로 만들어 시작하세요.", noMatch: "일치하는 잡이 없습니다.",
+    jobName: "잡 / 현장명", address: "주소", stages: "단계", noStages: "단계가 없습니다. 아래에서 추가하세요.",
+    addStage: "단계 추가", deleteJob: "이 잡을 삭제할까요?", deleteStage: "이 단계를 삭제할까요?",
+    markDone: "완료 표시", done: "완료", itemCount2: "개",
+    locDenied: "위치 권한이 꺼져 있어요. 설정 → Safari → 위치에서 켜주세요.",
+    locTimeout: "위치 확인 시간이 초과됐어요. 다시 시도하거나 날씨를 수동 입력하세요.",
+    locFailed: "위치를 가져오지 못했어요.", windHint: "바람 km/h · 비·강풍일 강조",
   },
 };
 const T = (lang, k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
@@ -164,6 +180,9 @@ const WX = (code) => {
   return { icon: Wind, label: "Storm", c: C.red };
 };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// Mon-first index: Mon=0 ... Sun=6, for sorting a week Monday→Sunday
+const monIndex = (jsDay) => (jsDay + 6) % 7;
+const WINDY_KMH = 30; // wind speed at/above this is flagged as work-affecting
 
 /* ════════ AI ════════ */
 async function askClaude(prompt, system, imageData) {
@@ -183,30 +202,27 @@ async function askClaude(prompt, system, imageData) {
 }
 
 /* ════════ persistence ════════ */
-const hasArtifactStorage = typeof window !== "undefined" && window.storage && typeof window.storage.get === "function";
-const store = hasArtifactStorage ? {
+const store = {
   async get(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } },
   async set(k, v) { try { await window.storage.set(k, JSON.stringify(v)); } catch {} },
   async del(k) { try { await window.storage.delete(k); } catch {} },
-} : {
-  async get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
-  async set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-  async del(k) { try { localStorage.removeItem(k); } catch {} },
 };
-const INDEX_KEY = "li:index";
+const INDEX_KEY = "li:jobs";          // [{id, jobNo, name, client, status, year, updatedAt}]
 const PREFS_KEY = "li:prefs";
-const pKey = (id) => `li:proj:${id}`;
+const jKey = (id) => `li:job:${id}`;  // full job (with stages) stored here
 
-const blankProject = (name, mode) => ({
-  id: uid(), name: name || "New Project", mode: mode || "quote", client: "", code: "", clientLang: "en",
-  clientEmail: "", lat: null, lng: null, createdAt: iso(), updatedAt: iso(),
+// A Job = one site. Holds shared info + an array of stages (quote / inspect / final).
+const blankJob = (jobNo) => ({
+  id: uid(), jobNo: jobNo || "", name: "New Job", client: "", address: "", code: "",
+  clientLang: "en", clientEmail: "", lat: null, lng: null, status: "active", // active | done
+  createdAt: iso(), updatedAt: iso(), year: new Date().getFullYear(),
+  stages: [],
+});
+// A stage carries the working data for one mode. Shares client/lang/loc from its job at report time.
+const blankStage = (mode) => ({
+  id: uid(), mode: mode || "quote", createdAt: iso(), updatedAt: iso(),
   items: [], subs: {}, weather: { status: "idle", days: [] }, floorPlan: null, pins: [],
-  signature: null,
-  quoteNo: "", // assigned on first final-quote build
-  validDays: 30, // quote validity, editable per project
-  tradeMargins: {},   // {tradeKey: percent}  overrides default
-  subQuotes: [],      // {id, trade, sub, amount, note, included}
-  myWork: [],         // {id, title, amount, note}  (my own labour/materials)
+  signature: null, quoteNo: "", validDays: 30, tradeMargins: {}, subQuotes: [], myWork: [],
 });
 const blankItem = () => ({
   id: uid(), title: "", note: "", trade: "other", status: "open", severity: "med", photos: [], ts: iso(),
@@ -214,11 +230,12 @@ const blankItem = () => ({
 });
 const UNITS = ["m", "mm", "m²", "m³", "ea", "hr", "ls", "t"];
 const GST_RATE = 0.10;
-const QUOTE_VALID_DAYS = 30; // default; editable per project
 const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const money = (n) => "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const TEMPLATES_KEY = "li:templates";
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+// job number: YY-NNN
+const makeJobNo = (counter) => { const yy = String(new Date().getFullYear()).slice(-2); return `${yy}-${String(counter).padStart(3, "0")}`; };
 
 const inputStyle = {
   background: C.panel2, border: `1px solid ${C.line}`, color: C.text,
@@ -227,12 +244,13 @@ const inputStyle = {
 
 /* ═══════════════ ROOT ═══════════════ */
 export default function App() {
-  const [prefs, setPrefs] = useState({ lang: "en", defaultMargin: 20, quoteCounter: 0,
+  const [prefs, setPrefs] = useState({ lang: "en", defaultMargin: 20, quoteCounter: 0, jobCounter: 0,
     company: { name: "My Landscaping Co.", contact: "", logo: null, email: "" } });
-  const [index, setIndex] = useState([]);
+  const [index, setIndex] = useState([]);       // job summaries
   const [templates, setTemplates] = useState([]);
-  const [project, setProject] = useState(null);
-  const [screen, setScreen] = useState("list");
+  const [job, setJob] = useState(null);          // active full job
+  const [activeStageId, setActiveStageId] = useState(null);
+  const [screen, setScreen] = useState("list");  // list | job | stage | settings
   const [loaded, setLoaded] = useState(false);
   const saveTimer = useRef();
   const L = prefs.lang;
@@ -246,40 +264,57 @@ export default function App() {
 
   useEffect(() => { if (loaded) store.set(PREFS_KEY, prefs); }, [prefs, loaded]);
 
+  // autosave the active job (with all its stages)
   useEffect(() => {
-    if (!project || !loaded) return;
+    if (!job || !loaded) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      const updated = { ...project, updatedAt: iso() };
-      await store.set(pKey(project.id), updated);
+      const updated = { ...job, updatedAt: iso() };
+      await store.set(jKey(job.id), updated);
       setIndex((prev) => {
-        const next = prev.filter((x) => x.id !== project.id);
-        next.unshift({ id: project.id, name: project.name, mode: project.mode, updatedAt: updated.updatedAt });
+        const next = prev.filter((x) => x.id !== job.id);
+        next.unshift({ id: job.id, jobNo: job.jobNo, name: job.name, client: job.client,
+          status: job.status, year: job.year, stageCount: (job.stages || []).length, updatedAt: updated.updatedAt });
         store.set(INDEX_KEY, next); return next;
       });
     }, 600);
-  }, [project, loaded]);
+  }, [job, loaded]);
 
-  const openProject = async (id) => { const p = await store.get(pKey(id)); if (p) { setProject(p); setScreen("project"); } };
-  const createProject = (mode) => {
-    const names = { quote: L === "ko" ? "새 견적 방문" : "New Quote Visit",
-      inspect: L === "ko" ? "새 점검" : "New Inspection", final: L === "ko" ? "새 최종 견적" : "New Final Quote" };
-    setProject(blankProject(names[mode] || names.quote, mode)); setScreen("project");
+  const openJob = async (id) => { const j = await store.get(jKey(id)); if (j) { setJob(j); setScreen("job"); } };
+  const createJob = () => {
+    const n = (prefs.jobCounter || 0) + 1;
+    setPrefs((p) => ({ ...p, jobCounter: n }));
+    const j = blankJob(makeJobNo(n));
+    j.name = L === "ko" ? "새 현장" : "New Job";
+    setJob(j); setScreen("job");
   };
-  const deleteProject = async (id) => { await store.del(pKey(id));
+  const deleteJob = async (id) => { await store.del(jKey(id));
     setIndex((prev) => { const next = prev.filter((x) => x.id !== id); store.set(INDEX_KEY, next); return next; }); };
 
+  // stage helpers operate on the active job
+  const addStage = (mode) => {
+    const st = blankStage(mode);
+    setJob((prev) => ({ ...prev, stages: [...(prev.stages || []), st] }));
+    setActiveStageId(st.id); setScreen("stage");
+  };
+  const openStage = (id) => { setActiveStageId(id); setScreen("stage"); };
+  const deleteStage = (id) => setJob((prev) => ({ ...prev, stages: prev.stages.filter((s) => s.id !== id) }));
+  const setStage = (updater) => setJob((prev) => ({ ...prev, stages: prev.stages.map((s) =>
+    s.id === activeStageId ? (typeof updater === "function" ? updater(s) : updater) : s) }));
+  const activeStage = job && job.stages ? job.stages.find((s) => s.id === activeStageId) : null;
+
   const saveTemplate = () => {
-    if (!project) return;
-    const name = window.prompt(T(L, "templateName"), project.name); if (!name) return;
-    const tpl = { id: uid(), name, mode: project.mode,
-      items: project.items.map((it) => ({ ...blankItem(), title: it.title, trade: it.trade, unit: it.unit, severity: it.severity })) };
+    if (!activeStage) return;
+    const name = window.prompt(T(L, "templateName"), T(L, MODE_META[activeStage.mode].label)); if (!name) return;
+    const tpl = { id: uid(), name, mode: activeStage.mode,
+      items: activeStage.items.map((it) => ({ ...blankItem(), title: it.title, trade: it.trade, unit: it.unit, severity: it.severity })) };
     setTemplates((prev) => { const next = [tpl, ...prev]; store.set(TEMPLATES_KEY, next); return next; });
   };
   const useTemplate = (tpl) => {
-    const p = blankProject(tpl.name, tpl.mode || "quote");
-    p.items = tpl.items.map((it) => ({ ...blankItem(), title: it.title, trade: it.trade, unit: it.unit, severity: it.severity }));
-    setProject(p); setScreen("project");
+    const st = blankStage(tpl.mode || "quote");
+    st.items = tpl.items.map((it) => ({ ...blankItem(), title: it.title, trade: it.trade, unit: it.unit, severity: it.severity }));
+    setJob((prev) => ({ ...prev, stages: [...(prev.stages || []), st] }));
+    setActiveStageId(st.id); setScreen("stage");
   };
   const deleteTemplate = (id) => setTemplates((prev) => { const next = prev.filter((t) => t.id !== id); store.set(TEMPLATES_KEY, next); return next; });
 
@@ -287,13 +322,19 @@ export default function App() {
     return <div style={{ background: C.bg, minHeight: "100vh", display: "grid", placeItems: "center", color: C.dim }}>
       <Loader2 className="spin" /><style>{spinCss}</style></div>;
 
+  const goBack = () => {
+    if (screen === "stage") { setScreen("job"); setActiveStageId(null); }
+    else if (screen === "job") { setScreen("list"); setJob(null); }
+    else setScreen("list");
+  };
+
   return (
     <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: "'Segoe UI','Malgun Gothic',system-ui,sans-serif" }}>
       <style>{spinCss}</style>
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 16px 90px" }}>
         <header style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0",
           position: "sticky", top: 0, background: C.bg, zIndex: 8, borderBottom: `1px solid ${C.line}` }}>
-          {screen === "project" && <button onClick={() => { setScreen("list"); setProject(null); }} style={iconBtn}><ChevronLeft size={18} /></button>}
+          {(screen === "job" || screen === "stage") && <button onClick={goBack} style={iconBtn}><ChevronLeft size={18} /></button>}
           {prefs.company.logo
             ? <img src={prefs.company.logo} alt="" style={{ height: 32, borderRadius: 7 }} />
             : <div style={{ width: 32, height: 32, borderRadius: 8, background: C.green, display: "grid", placeItems: "center", color: C.bg }}><Building2 size={18} /></div>}
@@ -303,27 +344,145 @@ export default function App() {
         </header>
 
         {screen === "settings" && <SettingsScreen prefs={prefs} setPrefs={setPrefs} L={L} />}
-        {screen === "list" && <ProjectList index={index} templates={templates} L={L} onOpen={openProject}
-          onCreate={createProject} onDelete={deleteProject} onUseTemplate={useTemplate} onDeleteTemplate={deleteTemplate} />}
-        {screen === "project" && project && <ProjectScreen project={project} setProject={setProject} prefs={prefs} setPrefs={setPrefs} L={L} onSaveTemplate={saveTemplate} />}
+        {screen === "list" && <JobList index={index} L={L} onOpen={openJob} onCreate={createJob} onDelete={deleteJob} />}
+        {screen === "job" && job && <JobScreen job={job} setJob={setJob} L={L}
+          onAddStage={addStage} onOpenStage={openStage} onDeleteStage={deleteStage}
+          templates={templates} onUseTemplate={useTemplate} onDeleteTemplate={deleteTemplate} />}
+        {screen === "stage" && job && activeStage && <ProjectScreen project={mergeStage(job, activeStage)}
+          setProject={makeStageSetter(setJob, activeStageId)}
+          prefs={prefs} setPrefs={setPrefs} L={L} onSaveTemplate={saveTemplate} />}
       </div>
     </div>
   );
 }
 
-/* ═══════════════ Project list ═══════════════ */
+// merge shared job fields into the stage so ProjectScreen/report see them as before
+function mergeStage(job, stage) {
+  return { ...stage, name: job.name, client: job.client, address: job.address, code: job.code,
+    clientLang: job.clientLang, clientEmail: job.clientEmail, lat: job.lat, lng: job.lng, jobNo: job.jobNo };
+}
+// shared fields live on the job; everything else on the stage
+const SHARED_FIELDS = ["name", "client", "address", "code", "clientLang", "clientEmail", "lat", "lng"];
+function makeStageSetter(setJob, stageId) {
+  return (updater) => setJob((prevJob) => {
+    const stage = prevJob.stages.find((s) => s.id === stageId);
+    const merged = mergeStage(prevJob, stage);
+    const next = typeof updater === "function" ? updater(merged) : { ...merged, ...updater };
+    const jobPatch = {}; const stagePatch = {};
+    Object.keys(next).forEach((k) => {
+      if (SHARED_FIELDS.includes(k)) { if (next[k] !== prevJob[k]) jobPatch[k] = next[k]; }
+      else stagePatch[k] = next[k];
+    });
+    return { ...prevJob, ...jobPatch,
+      stages: prevJob.stages.map((s) => s.id === stageId ? { ...stagePatch, id: s.id } : s) };
+  });
+}
+
+/* ═══════════════ Mode meta ═══════════════ */
 const MODE_META = {
   quote: { color: "#e0a73a", label: "modeQuote", desc: "quoteVisitDesc" },
   inspect: { color: "#5cbf72", label: "modeInspect", desc: "inspectDesc" },
   final: { color: "#5fa8d3", label: "modeFinal", desc: "finalDesc" },
 };
-function ProjectList({ index, templates, L, onOpen, onCreate, onDelete, onUseTemplate, onDeleteTemplate }) {
+
+/* ═══════════════ Job list (search + year groups) ═══════════════ */
+function JobList({ index, L, onOpen, onCreate, onDelete }) {
+  const [q, setQ] = useState("");
+  const ql = q.trim().toLowerCase();
+  const filtered = index.filter((j) => !ql ||
+    [j.name, j.client, j.jobNo].filter(Boolean).some((s) => s.toLowerCase().includes(ql)));
+  // group by year (desc)
+  const byYear = {};
+  filtered.forEach((j) => { const y = j.year || new Date(j.updatedAt).getFullYear(); (byYear[y] = byYear[y] || []).push(j); });
+  const years = Object.keys(byYear).sort((a, b) => b - a);
+
   return (
     <section style={{ marginTop: 18 }}>
-      <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>{T(L, "newProject")}</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginBottom: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <h2 style={{ fontSize: 18, margin: 0 }}>{T(L, "jobs")}</h2>
+        <button onClick={onCreate} style={primaryBtn}><Plus size={16} /> {T(L, "newJob")}</button>
+      </div>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={T(L, "searchJobs")}
+        style={{ ...inputStyle, marginBottom: 16 }} />
+
+      {index.length === 0 ? (
+        <div style={{ color: C.dim, textAlign: "center", padding: "40px 0" }}>
+          <FolderOpen size={36} style={{ opacity: .4 }} /><p>{T(L, "noJobs")}</p></div>
+      ) : years.length === 0 ? (
+        <div style={{ color: C.dim, textAlign: "center", padding: "30px 0" }}>{T(L, "noMatch")}</div>
+      ) : years.map((y) => (
+        <div key={y} style={{ marginBottom: 18 }}>
+          <h3 style={{ fontSize: 14, color: C.dim, margin: "0 0 8px", borderBottom: `1px solid ${C.line}`, paddingBottom: 6 }}>{y}</h3>
+          {byYear[y].map((j) => (
+            <div key={j.id} style={{ ...card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 8,
+              opacity: j.status === "done" ? 0.65 : 1 }} onClick={() => onOpen(j.id)}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "monospace", fontSize: 12, background: C.panel2, borderRadius: 5, padding: "2px 7px", color: C.amber }}>{j.jobNo}</span>
+                  {j.name}
+                  {j.status === "done" && <span style={{ fontSize: 11, color: C.green }}>✓ {T(L, "done")}</span>}
+                </div>
+                <div style={{ fontSize: 12, color: C.dim, marginTop: 3 }}>
+                  {j.client ? j.client + " · " : ""}{j.stageCount || 0} {T(L, "stages")} · {new Date(j.updatedAt).toLocaleDateString()}</div>
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); if (window.confirm(T(L, "deleteJob"))) onDelete(j.id); }} style={iconBtn}><Trash2 size={16} /></button>
+            </div>
+          ))}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/* ═══════════════ Job screen (meta + stage list) ═══════════════ */
+function JobScreen({ job, setJob, L, onAddStage, onOpenStage, onDeleteStage, templates, onUseTemplate, onDeleteTemplate }) {
+  const patch = (p) => setJob((prev) => ({ ...prev, ...p }));
+  const stages = job.stages || [];
+  return (
+    <section style={{ marginTop: 16 }}>
+      {/* job header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ fontFamily: "monospace", fontWeight: 700, background: C.panel2, color: C.amber, borderRadius: 6, padding: "4px 10px" }}>{job.jobNo}</span>
+        <button onClick={() => patch({ status: job.status === "done" ? "active" : "done" })}
+          style={{ ...chip(job.status === "done", C.green), marginLeft: "auto" }}>
+          {job.status === "done" ? `✓ ${T(L, "done")}` : T(L, "markDone")}</button>
+      </div>
+      <input value={job.name} onChange={(e) => patch({ name: e.target.value })} placeholder={T(L, "jobName")}
+        style={{ ...inputStyle, fontSize: 18, fontWeight: 700, marginBottom: 10 }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <input value={job.client} placeholder={T(L, "client")} style={inputStyle} onChange={(e) => patch({ client: e.target.value })} />
+        <input value={job.address} placeholder={T(L, "address")} style={inputStyle} onChange={(e) => patch({ address: e.target.value })} />
+      </div>
+      <label style={lbl}><Globe size={13} /> {T(L, "clientLang")}</label>
+      <select value={job.clientLang} onChange={(e) => patch({ clientLang: e.target.value })} style={inputStyle}>
+        {LANGS.map((l) => <option key={l.code} value={l.code}>{l.native} — {langEnglishName[l.code]}</option>)}
+      </select>
+      <input value={job.clientEmail || ""} placeholder={T(L, "clientEmail")} type="email"
+        onChange={(e) => patch({ clientEmail: e.target.value })} style={{ ...inputStyle, marginTop: 8 }} />
+
+      {/* stages */}
+      <h2 style={{ fontSize: 16, margin: "22px 0 8px" }}>{T(L, "stages")} ({stages.length})</h2>
+      {stages.length === 0 && <p style={{ color: C.dim, fontSize: 13, marginTop: 0 }}>{T(L, "noStages")}</p>}
+      {stages.map((s) => {
+        const mm = MODE_META[s.mode] || MODE_META.quote;
+        const count = (s.items || []).length + (s.subQuotes || []).length;
+        return (
+          <div key={s.id} style={{ ...card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 8,
+            borderLeft: `4px solid ${mm.color}` }} onClick={() => onOpenStage(s.id)}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, color: mm.color }}>{T(L, mm.label)}</div>
+              <div style={{ fontSize: 12, color: C.dim }}>{count} {T(L, "itemCount")} · {new Date(s.updatedAt || s.createdAt).toLocaleDateString()}</div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); if (window.confirm(T(L, "deleteStage"))) onDeleteStage(s.id); }} style={iconBtn}><Trash2 size={15} /></button>
+          </div>
+        );
+      })}
+
+      {/* add stage */}
+      <h3 style={{ fontSize: 14, color: C.dim, margin: "16px 0 8px" }}>{T(L, "addStage")}</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
         {["quote", "inspect", "final"].map((m) => (
-          <button key={m} onClick={() => onCreate(m)} style={{ ...card, textAlign: "left", cursor: "pointer",
+          <button key={m} onClick={() => onAddStage(m)} style={{ ...card, textAlign: "left", cursor: "pointer",
             borderLeft: `4px solid ${MODE_META[m].color}`, display: "flex", alignItems: "center", gap: 12 }}>
             <Plus size={18} style={{ color: MODE_META[m].color }} />
             <div>
@@ -334,33 +493,14 @@ function ProjectList({ index, templates, L, onOpen, onCreate, onDelete, onUseTem
         ))}
       </div>
 
-      <h2 style={{ fontSize: 18, margin: "0 0 10px" }}>{T(L, "projects")}</h2>
-      {index.length === 0 ? (
-        <div style={{ color: C.dim, textAlign: "center", padding: "40px 0" }}>
-          <FolderOpen size={36} style={{ opacity: .4 }} /><p>{T(L, "noProjects")}</p></div>
-      ) : index.map((p) => {
-        const mm = MODE_META[p.mode] || MODE_META.quote;
-        return (
-        <div key={p.id} style={{ ...card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 8,
-          borderLeft: `4px solid ${mm.color}` }} onClick={() => onOpen(p.id)}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600 }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: C.dim }}>
-              <span style={{ color: mm.color, fontWeight: 700 }}>{T(L, mm.label)}</span> · {new Date(p.updatedAt).toLocaleString()}</div>
-          </div>
-          <button onClick={(e) => { e.stopPropagation(); if (window.confirm(T(L, "deleteProj"))) onDelete(p.id); }} style={iconBtn}><Trash2 size={16} /></button>
-        </div>
-        );
-      })}
-
       {templates && templates.length > 0 && (
-        <div style={{ marginTop: 22 }}>
-          <h3 style={{ fontSize: 15, color: C.dim }}>{T(L, "templates")}</h3>
+        <div style={{ marginTop: 18 }}>
+          <h3 style={{ fontSize: 14, color: C.dim, margin: "0 0 8px" }}>{T(L, "templates")}</h3>
           {templates.map((t) => (
             <div key={t.id} style={{ ...card, display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <ClipboardList size={18} style={{ color: C.amber }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{t.name}</div>
+                <div style={{ fontWeight: 600 }}>{t.name} <span style={{ fontSize: 11, color: (MODE_META[t.mode] || MODE_META.quote).color }}>· {T(L, (MODE_META[t.mode] || MODE_META.quote).label)}</span></div>
                 <div style={{ fontSize: 12, color: C.dim }}>{t.items.length} {T(L, "itemCount")}</div>
               </div>
               <button onClick={() => onUseTemplate(t)} style={{ ...miniAction }}><Plus size={13} /> {T(L, "useTemplate")}</button>
@@ -413,25 +553,32 @@ function ProjectScreen({ project, setProject, prefs, setPrefs, L, onSaveTemplate
   const mode = project.mode || "quote";
 
   const locate = () => {
-    if (!navigator.geolocation) { patch({ weather: { status: "error", days: [] } }); return; }
+    if (!navigator.geolocation) { patch({ weather: { status: "error", reason: "nogeo", days: [] } }); return; }
     patch({ weather: { status: "loading", days: [] } });
     navigator.geolocation.getCurrentPosition(
       (pos) => { const { latitude: lat, longitude: lng } = pos.coords; setProject((prev) => ({ ...prev, lat, lng })); fetchWeather(lat, lng); },
-      () => patch({ weather: { status: "error", days: [] } }), { enableHighAccuracy: true, timeout: 8000 });
+      (err) => { const reason = err && err.code === 1 ? "denied" : err && err.code === 3 ? "timeout" : "failed";
+        patch({ weather: { status: "error", reason, days: [] } }); },
+      { enableHighAccuracy: true, timeout: 10000 });
   };
   const fetchWeather = async (lat, lng) => {
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&past_days=7&forecast_days=1&timezone=auto`;
-      const d = await (await fetch(url)).json();
-      const days = d.daily.time.map((t, i) => ({ date: t, dow: DOW[new Date(t).getDay()], code: d.daily.weather_code[i],
-        tmax: Math.round(d.daily.temperature_2m_max[i]), tmin: Math.round(d.daily.temperature_2m_min[i]), rain: d.daily.precipitation_sum[i] })).slice(-7);
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&past_days=7&forecast_days=1&timezone=auto`;
+      const r = await fetch(url); if (!r.ok) throw new Error("http");
+      const d = await r.json();
+      let days = d.daily.time.map((t, i) => { const dt = new Date(t);
+        return { date: t, jsDay: dt.getDay(), dow: DOW[dt.getDay()], code: d.daily.weather_code[i],
+          tmax: Math.round(d.daily.temperature_2m_max[i]), tmin: Math.round(d.daily.temperature_2m_min[i]),
+          rain: d.daily.precipitation_sum[i], wind: Math.round(d.daily.wind_speed_10m_max[i]) }; }).slice(-7);
+      days = days.sort((a, b) => monIndex(a.jsDay) - monIndex(b.jsDay)); // Mon → Sun
       patch({ weather: { status: "ok", days } });
-    } catch { patch({ weather: { status: "error", days: [] } }); }
+    } catch { patch({ weather: { status: "error", reason: "weather", days: [] } }); }
   };
   const manualWeek = () => {
     const base = new Date();
-    const days = Array.from({ length: 7 }).map((_, i) => { const dt = new Date(base); dt.setDate(base.getDate() - (6 - i));
-      return { date: dt.toISOString().slice(0, 10), dow: DOW[dt.getDay()], code: 0, tmax: 22, tmin: 14, rain: 0 }; });
+    let days = Array.from({ length: 7 }).map((_, i) => { const dt = new Date(base); dt.setDate(base.getDate() - (6 - i));
+      return { date: dt.toISOString().slice(0, 10), jsDay: dt.getDay(), dow: DOW[dt.getDay()], code: 0, tmax: 22, tmin: 14, rain: 0, wind: 10 }; });
+    days = days.sort((a, b) => monIndex(a.jsDay) - monIndex(b.jsDay));
     patch({ weather: { status: "manual", days } });
   };
 
@@ -459,27 +606,18 @@ function ProjectScreen({ project, setProject, prefs, setPrefs, L, onSaveTemplate
           background: (MODE_META[mode] || MODE_META.quote).color, borderRadius: 6, padding: "3px 10px", marginBottom: 10 }}>
           {T(L, (MODE_META[mode] || MODE_META.quote).label)}
         </div>
-        <input value={project.name} onChange={(e) => patch({ name: e.target.value })} placeholder={T(L, "projectName")}
-          style={{ ...inputStyle, fontSize: 18, fontWeight: 700, marginBottom: 10 }} />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <input value={project.client} placeholder={T(L, "client")} style={inputStyle} onChange={(e) => patch({ client: e.target.value })} />
-          <input value={project.code} placeholder={T(L, "code")} style={inputStyle} onChange={(e) => patch({ code: e.target.value })} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <span style={{ fontFamily: "monospace", fontSize: 12, background: C.panel2, color: C.amber, borderRadius: 5, padding: "3px 8px" }}>{project.jobNo}</span>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>{project.name}</span>
         </div>
-        <label style={lbl}><Globe size={13} /> {T(L, "clientLang")}</label>
-        <select value={project.clientLang} onChange={(e) => patch({ clientLang: e.target.value })} style={inputStyle}>
-          {LANGS.map((l) => <option key={l.code} value={l.code}>{l.native} — {langEnglishName[l.code]}</option>)}
-        </select>
-        <input value={project.clientEmail || ""} placeholder={T(L, "clientEmail")} type="email"
-          onChange={(e) => patch({ clientEmail: e.target.value })} style={{ ...inputStyle, marginTop: 8 }} />
         {mode !== "inspect" && (
-          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span style={{ fontSize: 13, color: C.dim, whiteSpace: "nowrap" }}>{T(L, "validUntil")}:</span>
             <input value={project.validDays ?? 30} inputMode="numeric" onChange={(e) => patch({ validDays: e.target.value })}
               style={{ ...inputStyle, width: 70, padding: "6px 8px" }} />
             <span style={{ fontSize: 13, color: C.dim }}>{L === "ko" ? "일" : "days"}</span>
           </div>
         )}
-        {/* location/weather only matter for quote (measure) and inspect */}
         {mode !== "final" && (
           <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
             <button onClick={locate} style={{ ...inputStyle, width: "auto", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -792,11 +930,15 @@ function savePinPhoto(setProject, pinId, photoId, dataUrl) {
 
 /* ═══════════════ Weather strip ═══════════════ */
 function WeatherStrip({ weather, L, onManual }) {
-  const { status, days } = weather;
+  const { status, days, reason } = weather;
   if (status === "idle") return null;
   if (status === "loading") return <div style={{ ...card, marginTop: 14, display: "flex", gap: 8, alignItems: "center" }}><Loader2 size={16} className="spin" /> …</div>;
-  if (status === "error") return <div style={{ ...card, marginTop: 14, display: "flex", gap: 10, alignItems: "center" }}>
-    <span style={{ color: C.dim }}>{T(L, "weatherFail")}</span><button onClick={onManual} style={miniBtn}>{T(L, "enterManual")}</button></div>;
+  if (status === "error") {
+    const msg = reason === "denied" ? T(L, "locDenied") : reason === "timeout" ? T(L, "locTimeout")
+      : reason === "weather" ? T(L, "weatherFail") : T(L, "locFailed");
+    return <div style={{ ...card, marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <span style={{ color: C.dim, fontSize: 13 }}>{msg}</span><button onClick={onManual} style={miniBtn}>{T(L, "enterManual")}</button></div>;
+  }
   return (
     <section style={{ ...card, marginTop: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -804,13 +946,15 @@ function WeatherStrip({ weather, L, onManual }) {
         <span style={{ color: C.dim, fontSize: 12 }}>{T(L, "weekHint")}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
-        {days.map((d, i) => { const w = WX(d.code); const Icon = w.icon; const rainy = d.rain > 1;
-          return <div key={i} style={{ background: rainy ? "#1c2a33" : C.panel2, border: `1px solid ${rainy ? C.blue : C.line}`,
+        {days.map((d, i) => { const w = WX(d.code); const Icon = w.icon; const rainy = d.rain > 1; const windy = d.wind >= WINDY_KMH;
+          return <div key={i} style={{ background: rainy ? "#1c2a33" : C.panel2, border: `1px solid ${rainy ? C.blue : windy ? C.amber : C.line}`,
             borderRadius: 8, padding: "8px 2px", textAlign: "center" }}>
             <div style={{ fontWeight: 700, fontSize: 12 }}>{d.dow}</div>
-            <Icon size={19} style={{ color: w.c, margin: "4px 0" }} />
+            <Icon size={19} style={{ color: w.c, margin: "3px 0" }} />
             <div style={{ fontSize: 10, color: C.dim }}>{d.tmax}°/{d.tmin}°</div>
-            <div style={{ fontSize: 10, color: C.blue, fontWeight: 700, height: 13 }}>{d.rain > 0 ? `${d.rain.toFixed(1)}mm` : ""}</div>
+            <div style={{ fontSize: 10, color: C.blue, fontWeight: 700, height: 12 }}>{d.rain > 0 ? `${d.rain.toFixed(1)}mm` : ""}</div>
+            <div style={{ fontSize: 10, color: windy ? C.amber : C.dim, fontWeight: windy ? 700 : 400, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+              <Wind size={9} />{d.wind != null ? d.wind : "—"}</div>
           </div>; })}
       </div>
     </section>
@@ -1188,7 +1332,7 @@ async function generateReport({ kind, tradeKey, project, prefs, setProject, setP
     subtitleClient: "Thank you for the opportunity to quote. Please see our quotation below.",
     project: "Project", client: isQuote ? "Principal" : "Client", recipient: "Quote requested from",
     location: "Site location", date: "Date", trade: "Trade", weather: "Weekly Weather",
-    weatherNote: "Days marked in blue had rainfall, which may have delayed work.",
+    weatherNote: "Days marked in blue had rainfall and amber wind speeds — both may have delayed work.",
     open: "Open", prog: "In Progress", done: "Done", high: "Urgent", med: "Attention", low: "Minor",
     generated: "Generated", defects: "Defect Locations (floor plan)",
     qty: "Qty", rate: "Rate", line: "Amount", subtotal: "Subtotal (ex GST)", gst: "GST (10%)",
@@ -1230,7 +1374,8 @@ async function generateReport({ kind, tradeKey, project, prefs, setProject, setP
   const wxHtml = isProgress && project.weather.days.length ? `<h2>${esc(TL.weather)}</h2>
     <div class="wx">${project.weather.days.map((d) => { const w = WX(d.code);
       return `<div class="wxd${d.rain > 1 ? " rain" : ""}"><div class="dow">${d.dow}</div><div class="wl">${w.label}</div>
-      <div class="tp">${d.tmax}° / ${d.tmin}°</div><div class="rn">${d.rain > 0 ? d.rain.toFixed(1) + "mm" : ""}</div></div>`; }).join("")}</div>
+      <div class="tp">${d.tmax}° / ${d.tmin}°</div><div class="rn">${d.rain > 0 ? d.rain.toFixed(1) + "mm" : ""}</div>
+      <div class="wd${d.wind >= WINDY_KMH ? " windy" : ""}">${d.wind != null ? d.wind + " km/h" : ""}</div></div>`; }).join("")}</div>
     <p class="hint">${esc(TL.weatherNote)}</p>` : "";
 
   let bodyHtml = "", totalsHtml = "";
@@ -1294,7 +1439,7 @@ async function generateReport({ kind, tradeKey, project, prefs, setProject, setP
     .meta{background:#f3f6f3;border-radius:10px;padding:14px 18px;font-size:14px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}.meta b{color:#444}
     h2{font-size:16px;border-left:4px solid ${accent};padding-left:8px;margin:26px 0 10px}
     .wx{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.wxd{background:#f3f6f3;border-radius:8px;padding:8px 4px;text-align:center;font-size:12px}
-    .wxd.rain{background:#e3eef7;border:1px solid #9cc5e3}.dow{font-weight:700;font-size:13px}.wl{margin:3px 0;color:#555}.tp{font-weight:600}.rn{color:#2b78b8;font-weight:700;height:14px}
+    .wxd.rain{background:#e3eef7;border:1px solid #9cc5e3}.dow{font-weight:700;font-size:13px}.wl{margin:3px 0;color:#555}.tp{font-weight:600}.rn{color:#2b78b8;font-weight:700;height:14px}.wd{font-size:11px;color:#888;height:13px}.wd.windy{color:#c47d1a;font-weight:700}
     .hint{font-size:12px;color:#777}.item{margin:14px 0;padding-bottom:14px;border-bottom:1px solid #e3e8e3}.ititle{font-weight:700;font-size:15px}
     .item p{margin:6px 0;color:#333;white-space:pre-wrap}.cat{background:#eef3ee;color:#3c8a50;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;margin-left:6px}
     .b{font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;margin-left:4px}
