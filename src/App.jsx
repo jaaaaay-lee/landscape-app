@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Camera, Pencil, Ruler, MapPin, Cloud, FileDown, Plus, Trash2, Settings,
   Sparkles, Image as ImgIcon, X, Check, Sun, CloudRain, CloudSnow, CloudDrizzle,
-  Wind, Undo2, Building2, Loader2, Tag, Mic, Map as MapIcon, FolderOpen,
+  Wind, Undo2, Building2, Loader2, Tag, Mic, Map as MapIcon, FolderOpen, Eraser,
   ChevronLeft, Globe, Square, ClipboardList,
 } from "lucide-react";
 
@@ -54,7 +54,7 @@ const I18N = {
     progressReport: "Progress Report", floorPlan: "Floor Plan",
     floorPlanHint: "Upload a plan, then tap to drop defect pins.", uploadPlan: "Upload Floor Plan",
     pinNote: "Pin note", record: "Record", recording: "Recording…", stop: "Stop",
-    summarize: "AI Summarise", analyze: "AI Analyse Photo", draw: "Draw", dimension: "Dimension",
+    summarize: "AI Summarise", analyze: "AI Analyse Photo", draw: "Draw", dimension: "Dimension", erase: "Erase",
     undo: "Undo", cancel: "Cancel", save: "Save", back: "Back", itemCount: "items",
     noItems: "No items.", drawHint: "Draw with Apple Pencil or set a dimension line — enter the real length once, the rest auto-measure.",
     voiceOff: "Voice input unavailable here — type your note and use AI Summarise.",
@@ -89,6 +89,15 @@ const I18N = {
     locDenied: "Location permission is off. Enable it in Settings → Safari → Location.",
     locTimeout: "Location timed out. Try again or enter weather manually.",
     locFailed: "Couldn't get location.", windHint: "wind km/h · rain/wind days flagged",
+    retry: "Retry", manualHint: "Tap values to edit. These appear on the client report.",
+    addressFull: "Site address (incl. suburb & state)", weatherByAddress: "Weather by address",
+    useGps: "Use GPS", noAddr: "Enter the site address first.",
+    geocodeFail: "Couldn't find that address. Add suburb/state, or use GPS.",
+    erase: "Erase", savePdf: "Save as PDF", responseByLabel: "Response wanted by",
+    exportData: "Export / Backup", importData: "Import / Restore",
+    exportHint: "Saves all jobs to one file. Keep it as a backup or move to another device.",
+    importConfirm: "Import this file? It will merge with your current jobs.", importDone: "Import complete.",
+    importFail: "Couldn't read that file.", savePhoto: "Save photo", saveJpg: "Save as image",
   },
   ko: {
     projects: "프로젝트", newProject: "새 프로젝트", noProjects: "프로젝트가 없습니다 — 새로 만들어 시작하세요.",
@@ -110,7 +119,7 @@ const I18N = {
     progressReport: "진행 보고서", floorPlan: "플로어 플랜",
     floorPlanHint: "도면을 올리고 탭하여 결함 핀을 찍으세요.", uploadPlan: "도면 업로드",
     pinNote: "핀 노트", record: "녹음", recording: "녹음 중…", stop: "정지",
-    summarize: "AI 요약", analyze: "AI 사진 분석", draw: "그리기", dimension: "치수",
+    summarize: "AI 요약", analyze: "AI 사진 분석", draw: "그리기", dimension: "치수", erase: "지우개",
     undo: "실행취소", cancel: "취소", save: "저장", back: "뒤로", itemCount: "개",
     noItems: "항목이 없습니다.", drawHint: "애플펜슬로 그리거나 치수선을 그으세요. 첫 선의 실제 길이를 한 번 입력하면 이후 자동 측정됩니다.",
     voiceOff: "여기선 음성입력을 쓸 수 없어요 — 노트를 입력하고 AI 요약을 사용하세요.",
@@ -145,6 +154,15 @@ const I18N = {
     locDenied: "위치 권한이 꺼져 있어요. 설정 → Safari → 위치에서 켜주세요.",
     locTimeout: "위치 확인 시간이 초과됐어요. 다시 시도하거나 날씨를 수동 입력하세요.",
     locFailed: "위치를 가져오지 못했어요.", windHint: "바람 km/h · 비·강풍일 강조",
+    retry: "다시 시도", manualHint: "값을 눌러 수정하세요. 클라이언트 보고서에 표시됩니다.",
+    addressFull: "현장 주소 (동네·주 포함)", weatherByAddress: "주소로 날씨 가져오기",
+    useGps: "GPS 사용", noAddr: "먼저 현장 주소를 입력하세요.",
+    geocodeFail: "주소를 찾지 못했어요. 동네·주를 추가하거나 GPS를 사용하세요.",
+    erase: "지우개", savePdf: "PDF로 저장", responseByLabel: "회신 희망일",
+    exportData: "내보내기 / 백업", importData: "가져오기 / 복원",
+    exportHint: "모든 잡을 파일 하나로 저장해요. 백업하거나 다른 기기로 옮길 때 쓰세요.",
+    importConfirm: "이 파일을 가져올까요? 현재 잡과 합쳐집니다.", importDone: "가져오기 완료.",
+    importFail: "파일을 읽지 못했어요.", savePhoto: "사진 저장", saveJpg: "이미지로 저장",
   },
 };
 const T = (lang, k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
@@ -157,8 +175,8 @@ const TRADES = [
   { key: "turf", en: "Turf", ko: "잔디" }, { key: "irrigation", en: "Irrigation", ko: "관수" },
   { key: "lighting", en: "Lighting", ko: "조명" }, { key: "paving", en: "Paving", ko: "포장" },
   { key: "retaining", en: "Retaining Wall", ko: "옹벽" },
-  { key: "excavator", en: "Excavator", ko: "굴삭기" },
-  { key: "bobcat", en: "Bobcat Operator", ko: "밥캣 오퍼레이터" },
+  { key: "plant", en: "Plant & Machinery", ko: "중장비" },
+  { key: "waste", en: "Waste Removal", ko: "폐기물 처리" },
   { key: "other", en: "Other", ko: "기타" },
 ];
 const tradeLabel = (key, lang) => {
@@ -222,7 +240,7 @@ const blankJob = (jobNo) => ({
 const blankStage = (mode) => ({
   id: uid(), mode: mode || "quote", createdAt: iso(), updatedAt: iso(),
   items: [], subs: {}, weather: { status: "idle", days: [] }, floorPlan: null, pins: [],
-  signature: null, quoteNo: "", validDays: 30, tradeMargins: {}, subQuotes: [], myWork: [],
+  signature: null, quoteNo: "", validDays: 30, responseDays: 7, tradeMargins: {}, subQuotes: [], myWork: [],
 });
 const blankItem = () => ({
   id: uid(), title: "", note: "", trade: "other", status: "open", severity: "med", photos: [], ts: iso(),
@@ -234,6 +252,9 @@ const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const money = (n) => "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const TEMPLATES_KEY = "li:templates";
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+function downloadDataUrl(dataUrl, filename) {
+  const a = document.createElement("a"); a.href = dataUrl; a.download = filename; a.click();
+}
 // job number: YY-NNN
 const makeJobNo = (counter) => { const yy = String(new Date().getFullYear()).slice(-2); return `${yy}-${String(counter).padStart(3, "0")}`; };
 
@@ -280,16 +301,68 @@ export default function App() {
     }, 600);
   }, [job, loaded]);
 
-  const openJob = async (id) => { const j = await store.get(jKey(id)); if (j) { setJob(j); setScreen("job"); } };
-  const createJob = () => {
+  const openJob = async (id) => {
+    const j = await store.get(jKey(id));
+    if (j) { setJob(j); setScreen("job"); return; }
+    // fallback: not yet persisted (e.g. just created) — rebuild a minimal job from the index entry
+    const entry = index.find((x) => x.id === id);
+    if (entry) { const nj = { ...blankJob(entry.jobNo), id: entry.id, name: entry.name, client: entry.client || "",
+      status: entry.status || "active", year: entry.year || new Date().getFullYear() };
+      setJob(nj); setScreen("job"); }
+  };
+  const createJob = async () => {
     const n = (prefs.jobCounter || 0) + 1;
     setPrefs((p) => ({ ...p, jobCounter: n }));
     const j = blankJob(makeJobNo(n));
     j.name = L === "ko" ? "새 현장" : "New Job";
+    await store.set(jKey(j.id), j); // persist immediately so it always opens
+    setIndex((prev) => { const next = [{ id: j.id, jobNo: j.jobNo, name: j.name, client: "", status: "active",
+      year: j.year, stageCount: 0, updatedAt: j.updatedAt }, ...prev]; store.set(INDEX_KEY, next); return next; });
     setJob(j); setScreen("job");
   };
   const deleteJob = async (id) => { await store.del(jKey(id));
     setIndex((prev) => { const next = prev.filter((x) => x.id !== id); store.set(INDEX_KEY, next); return next; }); };
+
+  // export every job + prefs + templates to one JSON file
+  const exportAll = async () => {
+    const jobs = [];
+    for (const e of index) { const j = await store.get(jKey(e.id)); if (j) jobs.push(j); }
+    const payload = { app: "namu-landscape", version: 1, exportedAt: iso(), prefs, templates, jobs };
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = `namu_backup_${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+  // import + merge from a backup file
+  const importAll = (file) => {
+    const r = new FileReader();
+    r.onload = async () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (!data || !Array.isArray(data.jobs)) throw new Error("shape");
+        let nextIndex = [...index];
+        for (const j of data.jobs) {
+          await store.set(jKey(j.id), j);
+          nextIndex = nextIndex.filter((x) => x.id !== j.id);
+          nextIndex.unshift({ id: j.id, jobNo: j.jobNo, name: j.name, client: j.client || "",
+            status: j.status || "active", year: j.year || new Date(j.updatedAt || iso()).getFullYear(),
+            stageCount: (j.stages || []).length, updatedAt: j.updatedAt || iso() });
+        }
+        setIndex(nextIndex); store.set(INDEX_KEY, nextIndex);
+        if (data.templates && Array.isArray(data.templates)) {
+          setTemplates((prev) => { const merged = [...data.templates, ...prev]
+            .filter((t, i, arr) => arr.findIndex((x) => x.id === t.id) === i);
+            store.set(TEMPLATES_KEY, merged); return merged; });
+        }
+        if (data.prefs && data.prefs.company) {
+          setPrefs((p) => ({ ...p, jobCounter: Math.max(p.jobCounter || 0, data.prefs.jobCounter || 0),
+            quoteCounter: Math.max(p.quoteCounter || 0, data.prefs.quoteCounter || 0) }));
+        }
+        alert(T(L, "importDone"));
+      } catch { alert(T(L, "importFail")); }
+    };
+    r.readAsText(file);
+  };
 
   // stage helpers operate on the active job
   const addStage = (mode) => {
@@ -344,7 +417,8 @@ export default function App() {
         </header>
 
         {screen === "settings" && <SettingsScreen prefs={prefs} setPrefs={setPrefs} L={L} />}
-        {screen === "list" && <JobList index={index} L={L} onOpen={openJob} onCreate={createJob} onDelete={deleteJob} />}
+        {screen === "list" && <JobList index={index} L={L} onOpen={openJob} onCreate={createJob} onDelete={deleteJob}
+          onExport={exportAll} onImport={importAll} />}
         {screen === "job" && job && <JobScreen job={job} setJob={setJob} L={L}
           onAddStage={addStage} onOpenStage={openStage} onDeleteStage={deleteStage}
           templates={templates} onUseTemplate={useTemplate} onDeleteTemplate={deleteTemplate} />}
@@ -386,8 +460,9 @@ const MODE_META = {
 };
 
 /* ═══════════════ Job list (search + year groups) ═══════════════ */
-function JobList({ index, L, onOpen, onCreate, onDelete }) {
+function JobList({ index, L, onOpen, onCreate, onDelete, onExport, onImport }) {
   const [q, setQ] = useState("");
+  const importRef = useRef();
   const ql = q.trim().toLowerCase();
   const filtered = index.filter((j) => !ql ||
     [j.name, j.client, j.jobNo].filter(Boolean).some((s) => s.toLowerCase().includes(ql)));
@@ -430,11 +505,19 @@ function JobList({ index, L, onOpen, onCreate, onDelete }) {
           ))}
         </div>
       ))}
+
+      <div style={{ marginTop: 24, borderTop: `1px solid ${C.line}`, paddingTop: 14 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={onExport} style={{ ...miniAction }}><FileDown size={13} /> {T(L, "exportData")}</button>
+          <button onClick={() => importRef.current?.click()} style={{ ...miniAction }}><Plus size={13} /> {T(L, "importData")}</button>
+          <input ref={importRef} type="file" accept="application/json,.json" style={{ display: "none" }}
+            onChange={(e) => { const f = e.target.files[0]; if (f && window.confirm(T(L, "importConfirm"))) onImport(f); e.target.value = ""; }} />
+        </div>
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 8 }}>{T(L, "exportHint")}</p>
+      </div>
     </section>
   );
 }
-
-/* ═══════════════ Job screen (meta + stage list) ═══════════════ */
 function JobScreen({ job, setJob, L, onAddStage, onOpenStage, onDeleteStage, templates, onUseTemplate, onDeleteTemplate }) {
   const patch = (p) => setJob((prev) => ({ ...prev, ...p }));
   const stages = job.stages || [];
@@ -442,7 +525,9 @@ function JobScreen({ job, setJob, L, onAddStage, onOpenStage, onDeleteStage, tem
     <section style={{ marginTop: 16 }}>
       {/* job header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <span style={{ fontFamily: "monospace", fontWeight: 700, background: C.panel2, color: C.amber, borderRadius: 6, padding: "4px 10px" }}>{job.jobNo}</span>
+        <input value={job.jobNo} onChange={(e) => patch({ jobNo: e.target.value })}
+          style={{ fontFamily: "monospace", fontWeight: 700, background: C.panel2, color: C.amber,
+            border: `1px solid ${C.line}`, borderRadius: 6, padding: "4px 10px", width: 100, outline: "none", fontSize: 14 }} />
         <button onClick={() => patch({ status: job.status === "done" ? "active" : "done" })}
           style={{ ...chip(job.status === "done", C.green), marginLeft: "auto" }}>
           {job.status === "done" ? `✓ ${T(L, "done")}` : T(L, "markDone")}</button>
@@ -562,18 +647,57 @@ function ProjectScreen({ project, setProject, prefs, setPrefs, L, onSaveTemplate
       { enableHighAccuracy: true, timeout: 10000 });
   };
   const fetchWeather = async (lat, lng) => {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max` +
+      `&past_days=7&forecast_days=1&timezone=auto`;
+    const tryOnce = async () => {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 9000);
+      try {
+        const r = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(to);
+        if (!r.ok) throw new Error("http " + r.status);
+        const d = await r.json();
+        if (!d || !d.daily || !Array.isArray(d.daily.time)) throw new Error("shape");
+        const D = d.daily;
+        const safe = (arr, i, fn) => { const v = arr && arr[i]; return v == null ? null : fn(v); };
+        let days = D.time.map((t, i) => { const dt = new Date(t);
+          return { date: t, jsDay: dt.getDay(), dow: DOW[dt.getDay()],
+            code: safe(D.weather_code, i, (v) => v),
+            tmax: safe(D.temperature_2m_max, i, Math.round),
+            tmin: safe(D.temperature_2m_min, i, Math.round),
+            rain: safe(D.precipitation_sum, i, (v) => v) ?? 0,
+            wind: safe(D.wind_speed_10m_max, i, Math.round) }; }).slice(-7);
+        days = days.sort((a, b) => monIndex(a.jsDay) - monIndex(b.jsDay));
+        return days;
+      } finally { clearTimeout(to); }
+    };
+    patch({ weather: { status: "loading", days: [] } });
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&past_days=7&forecast_days=1&timezone=auto`;
-      const r = await fetch(url); if (!r.ok) throw new Error("http");
-      const d = await r.json();
-      let days = d.daily.time.map((t, i) => { const dt = new Date(t);
-        return { date: t, jsDay: dt.getDay(), dow: DOW[dt.getDay()], code: d.daily.weather_code[i],
-          tmax: Math.round(d.daily.temperature_2m_max[i]), tmin: Math.round(d.daily.temperature_2m_min[i]),
-          rain: d.daily.precipitation_sum[i], wind: Math.round(d.daily.wind_speed_10m_max[i]) }; }).slice(-7);
-      days = days.sort((a, b) => monIndex(a.jsDay) - monIndex(b.jsDay)); // Mon → Sun
+      let days;
+      try { days = await tryOnce(); }
+      catch { days = await tryOnce(); } // one retry
       patch({ weather: { status: "ok", days } });
     } catch { patch({ weather: { status: "error", reason: "weather", days: [] } }); }
   };
+  // geocode the job address → coords → weather
+  const weatherByAddress = async () => {
+    const addr = (project.address || "").trim();
+    if (!addr) { patch({ weather: { status: "error", reason: "noaddr", days: [] } }); return; }
+    patch({ weather: { status: "loading", days: [] } });
+    try {
+      const gurl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(addr)}&count=1&language=en&format=json`;
+      const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 9000);
+      const r = await fetch(gurl, { signal: ctrl.signal }); clearTimeout(to);
+      const d = await r.json();
+      if (!d || !d.results || !d.results.length) { patch({ weather: { status: "error", reason: "geocode", days: [] } }); return; }
+      const { latitude, longitude } = d.results[0];
+      setProject((prev) => ({ ...prev, lat: latitude, lng: longitude }));
+      fetchWeather(latitude, longitude);
+    } catch { patch({ weather: { status: "error", reason: "geocode", days: [] } }); }
+  };
+  const retryWeather = () => { if (project.lat != null && project.lng != null) fetchWeather(project.lat, project.lng); };
+
   const manualWeek = () => {
     const base = new Date();
     let days = Array.from({ length: 7 }).map((_, i) => { const dt = new Date(base); dt.setDate(base.getDate() - (6 - i));
@@ -611,25 +735,42 @@ function ProjectScreen({ project, setProject, prefs, setPrefs, L, onSaveTemplate
           <span style={{ fontWeight: 700, fontSize: 16 }}>{project.name}</span>
         </div>
         {mode !== "inspect" && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, color: C.dim, whiteSpace: "nowrap" }}>{T(L, "validUntil")}:</span>
             <input value={project.validDays ?? 30} inputMode="numeric" onChange={(e) => patch({ validDays: e.target.value })}
               style={{ ...inputStyle, width: 70, padding: "6px 8px" }} />
             <span style={{ fontSize: 13, color: C.dim }}>{L === "ko" ? "일" : "days"}</span>
           </div>
         )}
+        {mode === "quote" && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+            <span style={{ fontSize: 13, color: C.dim, whiteSpace: "nowrap" }}>{T(L, "responseByLabel")}:</span>
+            <input value={project.responseDays ?? 7} inputMode="numeric" onChange={(e) => patch({ responseDays: e.target.value })}
+              style={{ ...inputStyle, width: 70, padding: "6px 8px" }} />
+            <span style={{ fontSize: 13, color: C.dim }}>{L === "ko" ? "일 후" : "days"}</span>
+          </div>
+        )}
         {mode !== "final" && (
-          <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button onClick={locate} style={{ ...inputStyle, width: "auto", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
-              <MapPin size={15} /> {T(L, "getLocation")}</button>
-            <span style={{ fontSize: 13, color: C.dim }}>{project.lat ? `${project.lat.toFixed(4)}, ${project.lng.toFixed(4)}` : T(L, "locationUnset")}</span>
+          <div style={{ marginTop: 10 }}>
+            <input value={project.address || ""} onChange={(e) => patch({ address: e.target.value })}
+              placeholder={T(L, "addressFull")} style={{ ...inputStyle, marginBottom: 8 }} />
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <button onClick={weatherByAddress} style={{ ...inputStyle, width: "auto", background: C.greenDim, fontWeight: 600,
+                display: "flex", alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
+                <MapIcon size={15} /> {T(L, "weatherByAddress")}</button>
+              <button onClick={locate} title={T(L, "useGps")} style={{ ...inputStyle, width: "auto",
+                display: "flex", alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
+                <MapPin size={15} /> {T(L, "useGps")}</button>
+            </div>
+            <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>
+              {project.lat != null ? `${project.lat.toFixed(4)}, ${project.lng.toFixed(4)}` : T(L, "locationUnset")}</div>
           </div>
         )}
       </section>
 
       {/* ───── INSPECT MODE ───── */}
       {mode === "inspect" && <>
-        <WeatherStrip weather={project.weather} L={L} onManual={manualWeek} />
+        <WeatherStrip weather={project.weather} L={L} onManual={manualWeek} onRetry={retryWeather} hasLocation={project.lat != null} />
         <AIAdvice project={project} L={L} />
         <FloorPlanSection project={project} setProject={setProject} L={L}
           onEditPhoto={(pinId, photoId) => setEditingPhoto({ pinId, photoId })} />
@@ -929,34 +1070,39 @@ function savePinPhoto(setProject, pinId, photoId, dataUrl) {
 }
 
 /* ═══════════════ Weather strip ═══════════════ */
-function WeatherStrip({ weather, L, onManual }) {
+function WeatherStrip({ weather, L, onManual, onRetry, hasLocation }) {
   const { status, days, reason } = weather;
   if (status === "idle") return null;
   if (status === "loading") return <div style={{ ...card, marginTop: 14, display: "flex", gap: 8, alignItems: "center" }}><Loader2 size={16} className="spin" /> …</div>;
   if (status === "error") {
     const msg = reason === "denied" ? T(L, "locDenied") : reason === "timeout" ? T(L, "locTimeout")
-      : reason === "weather" ? T(L, "weatherFail") : T(L, "locFailed");
+      : reason === "weather" ? T(L, "weatherFail") : reason === "noaddr" ? T(L, "noAddr")
+      : reason === "geocode" ? T(L, "geocodeFail") : T(L, "locFailed");
     return <div style={{ ...card, marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-      <span style={{ color: C.dim, fontSize: 13 }}>{msg}</span><button onClick={onManual} style={miniBtn}>{T(L, "enterManual")}</button></div>;
+      <span style={{ color: C.dim, fontSize: 13 }}>{msg}</span>
+      {hasLocation && reason === "weather" && <button onClick={onRetry} style={miniBtn}>{T(L, "retry")}</button>}
+      <button onClick={onManual} style={miniBtn}>{T(L, "enterManual")}</button></div>;
   }
+  const tt = (v) => (v == null ? "—" : `${v}°`);
   return (
     <section style={{ ...card, marginTop: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "center" }}>
         <span style={{ fontWeight: 700, fontSize: 14 }}>{T(L, "weather")} {status === "manual" && `(${T(L, "manual")})`}</span>
         <span style={{ color: C.dim, fontSize: 12 }}>{T(L, "weekHint")}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
-        {days.map((d, i) => { const w = WX(d.code); const Icon = w.icon; const rainy = d.rain > 1; const windy = d.wind >= WINDY_KMH;
+        {days.map((d, i) => { const w = WX(d.code); const Icon = w.icon; const rainy = d.rain > 1; const windy = d.wind != null && d.wind >= WINDY_KMH;
           return <div key={i} style={{ background: rainy ? "#1c2a33" : C.panel2, border: `1px solid ${rainy ? C.blue : windy ? C.amber : C.line}`,
             borderRadius: 8, padding: "8px 2px", textAlign: "center" }}>
             <div style={{ fontWeight: 700, fontSize: 12 }}>{d.dow}</div>
             <Icon size={19} style={{ color: w.c, margin: "3px 0" }} />
-            <div style={{ fontSize: 10, color: C.dim }}>{d.tmax}°/{d.tmin}°</div>
+            <div style={{ fontSize: 10, color: C.dim }}>{tt(d.tmax)}/{tt(d.tmin)}</div>
             <div style={{ fontSize: 10, color: C.blue, fontWeight: 700, height: 12 }}>{d.rain > 0 ? `${d.rain.toFixed(1)}mm` : ""}</div>
             <div style={{ fontSize: 10, color: windy ? C.amber : C.dim, fontWeight: windy ? 700 : 400, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
               <Wind size={9} />{d.wind != null ? d.wind : "—"}</div>
           </div>; })}
       </div>
+      {status === "manual" && <p style={{ color: C.dim, fontSize: 11, marginTop: 8, marginBottom: 0 }}>{T(L, "manualHint")}</p>}
     </section>
   );
 }
@@ -1204,6 +1350,9 @@ function PhotoRow({ photos, L, onAdd, onEdit, onDel }) {
             background: C.red, color: "#fff", border: "none", cursor: "pointer", fontSize: 12 }}>×</button>
           <div style={{ position: "absolute", bottom: 3, left: 3, background: "rgba(0,0,0,.6)", borderRadius: 5, padding: "1px 5px",
             fontSize: 10, display: "flex", alignItems: "center", gap: 3 }}><Pencil size={10} /></div>
+          <button onClick={() => downloadDataUrl(ph.annotated || ph.src, `photo_${ph.id}.jpg`)} title={T(L, "savePhoto")}
+            style={{ position: "absolute", bottom: 3, right: 3, width: 20, height: 20, borderRadius: 5, background: "rgba(0,0,0,.6)",
+            color: "#fff", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}><FileDown size={11} /></button>
         </div>
       ))}
       <button onClick={() => ref.current?.click()} style={{ width: 82, height: 82, borderRadius: 8, border: `1px dashed ${C.line}`,
@@ -1241,10 +1390,10 @@ function TradeQuotes({ project, setProject, L, onBuild }) {
 /* ═══════════════ Photo editor ═══════════════ */
 function PhotoEditor({ photo, onClose, onSave, L }) {
   const canvasRef = useRef(); const imgRef = useRef();
-  const [tool, setTool] = useState("draw"); const [color, setColor] = useState(C.amber);
+  const [tool, setTool] = useState("draw"); const [color, setColor] = useState("#ff2d2d");
   const [strokes, setStrokes] = useState([]); const [drawing, setDrawing] = useState(false);
   const [dimStart, setDimStart] = useState(null); const [scale, setScale] = useState({ pxPerUnit: null, unit: "m" });
-  const COLORS = [C.amber, C.red, C.green, C.sky, "#ffffff"];
+  const COLORS = ["#000000", "#ff2d2d", "#1fc24d", "#2d7dff", "#ffffff", "#ff5fbf"]; // black, red, green, blue, white, pink
   useEffect(() => { const img = new Image(); img.onload = () => { imgRef.current = img; const cv = canvasRef.current;
     const maxW = Math.min(window.innerWidth - 40, 780); const ratio = img.height / img.width; cv.width = maxW; cv.height = maxW * ratio; redraw([]); };
     img.src = photo.annotated || photo.src; }, []);
@@ -1263,11 +1412,22 @@ function PhotoEditor({ photo, onClose, onSave, L }) {
   const pos = (e) => { const r = canvasRef.current.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e;
     return { x: (t.clientX - r.left) * (canvasRef.current.width / r.width), y: (t.clientY - r.top) * (canvasRef.current.height / r.height) }; };
   const down = (e) => { e.preventDefault(); const p = pos(e);
-    if (tool === "draw") { setDrawing(true); setStrokes((s) => [...s, { tool: "draw", color, points: [p] }]); } else setDimStart(p); };
-  const move = (e) => { if (tool === "draw" && drawing) { e.preventDefault(); const p = pos(e);
+    if (tool === "erase") { setDrawing(true); eraseAt(p); }
+    else if (tool === "draw") { setDrawing(true); setStrokes((s) => [...s, { tool: "draw", color, points: [p] }]); }
+    else setDimStart(p); };
+  const eraseAt = (p) => {
+    setStrokes((s) => { const kept = s.filter((st) => {
+        if (st.tool === "draw") return !st.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 16);
+        if (st.tool === "dim") return !st.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 18);
+        return true; });
+      redraw(kept); return kept; });
+  };
+  const move = (e) => {
+    if (tool === "erase" && drawing) { e.preventDefault(); eraseAt(pos(e)); return; }
+    if (tool === "draw" && drawing) { e.preventDefault(); const p = pos(e);
       setStrokes((s) => { const c = [...s]; c[c.length - 1].points.push(p); redraw(c); return c; }); }
     else if (tool === "dim" && dimStart) redraw([...strokes, { tool: "dim", color, points: [dimStart, pos(e)] }]); };
-  const up = (e) => { if (tool === "draw") { setDrawing(false); return; }
+  const up = (e) => { if (tool === "draw" || tool === "erase") { setDrawing(false); return; }
     if (tool === "dim" && dimStart) { const p = pos(e.changedTouches ? { ...e, clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY } : e);
       const dist = Math.hypot(p.x - dimStart.x, p.y - dimStart.y); if (dist < 8) { setDimStart(null); return; }
       let label = ""; if (scale.pxPerUnit) label = (dist / scale.pxPerUnit).toFixed(2) + scale.unit;
@@ -1284,7 +1444,10 @@ function PhotoEditor({ photo, onClose, onSave, L }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", justifyContent: "center" }}>
         <TBtn on={() => setTool("draw")} active={tool === "draw"} icon={Pencil} label={T(L, "draw")} />
         <TBtn on={() => setTool("dim")} active={tool === "dim"} icon={Ruler} label={T(L, "dimension")} />
-        {COLORS.map((c) => <button key={c} onClick={() => setColor(c)} style={{ width: 32, height: 32, borderRadius: 8, background: c, cursor: "pointer", border: color === c ? "3px solid #fff" : "1px solid #555" }} />)}
+        <TBtn on={() => setTool("erase")} active={tool === "erase"} icon={Eraser} label={T(L, "erase")} />
+        {COLORS.map((c) => <button key={c} onClick={() => { setColor(c); if (tool === "erase") setTool("draw"); }}
+          style={{ width: 34, height: 34, borderRadius: 8, background: c, cursor: "pointer",
+          border: color === c && tool !== "erase" ? "3px solid #fff" : "1px solid #888" }} />)}
         <TBtn on={undo} icon={Undo2} label={T(L, "undo")} />
       </div>
       <canvas ref={canvasRef} onMouseDown={down} onMouseMove={move} onMouseUp={up} onMouseLeave={up} onTouchStart={down} onTouchMove={move} onTouchEnd={up}
@@ -1323,6 +1486,8 @@ async function generateReport({ kind, tradeKey, project, prefs, setProject, setP
   }
   const validDays = num(project.validDays) || 30;
   const validUntilStr = addDays(new Date(), validDays).toLocaleDateString();
+  const responseDays = num(project.responseDays) || 7;
+  const responseByStr = addDays(new Date(), responseDays).toLocaleDateString();
 
   const labels = {
     heading: isClient ? "Quotation" : isQuote ? "Quote Request" : "Site Progress Report",
@@ -1338,6 +1503,7 @@ async function generateReport({ kind, tradeKey, project, prefs, setProject, setP
     qty: "Qty", rate: "Rate", line: "Amount", subtotal: "Subtotal (ex GST)", gst: "GST (10%)",
     total: "Total (inc GST)", signature: "For and on behalf of", estimateNote: "Quantities are estimates and subject to site confirmation.",
     quoteNo: "Quote No.", validUntil: "Valid until", validNote: "This quotation is valid until the date shown above.",
+    responseBy: "Please respond by", tagline: "Residential Landscape Design & Construction · Brisbane / SEQ",
     item: "Item", amount: "Amount",
   };
   // For sub-quote requests: quantities only, no money. For client quote: build from margins.
@@ -1453,20 +1619,44 @@ async function generateReport({ kind, tradeKey, project, prefs, setProject, setP
     .totals .grand{font-size:19px;font-weight:800;color:${accent};border-top:1px solid #ddd;margin-top:6px;padding-top:8px}
     .totals .hint{text-align:right}
     .sig{height:80px;background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:6px}.sigline{border-top:1px solid #333;width:240px;margin-top:6px;font-size:13px;color:#555}
-    @media print{body{padding:0}}</style></head><body>
+    @media print{body{padding:0}.toolbar{display:none!important}}
+    .toolbar{position:fixed;top:0;left:0;right:0;background:#3c4d33;display:flex;gap:10px;justify-content:center;padding:10px;z-index:99;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .toolbar button{background:#bcd96a;color:#1d241e;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer}
+    .toolbar button.sec{background:#7d9162;color:#fff}
+    .doc{margin-top:56px}</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head><body>
+    <div class="toolbar">
+      <button onclick="window.print()">⬇ ${esc(TL.savePdf || "Save as PDF")}</button>
+      <button class="sec" onclick="saveJpg()">🖼 ${esc(TL.saveJpg || "Save as image")}</button>
+    </div>
+    <div class="doc" id="doc">
     <header>${logoHtml}<div class="co">${esc(company.name)}<small>${esc(company.contact)}</small></div><div class="badge">${badgeTxt}</div></header>
     <h1>${esc(TL.heading)}${tradeKey ? ` — ${esc(tradeLabel(tradeKey, "en"))}` : ""}</h1>
     <p class="sub">${esc(subtitle)}</p>
     <div class="meta"><div><b>${esc(TL.project)}</b> ${esc(project.name)}</div><div><b>${esc(TL.client)}</b> ${esc(project.client) || "—"}</div>
     ${isQuote && sub ? `<div><b>${esc(TL.recipient)}</b> ${esc(sub)}</div>` : ""}${tradeKey ? `<div><b>${esc(TL.trade)}</b> ${esc(tradeLabel(tradeKey, "en"))}</div>` : ""}
+    ${isQuote ? `<div><b>${esc(TL.responseBy)}</b> ${esc(responseByStr)}</div>` : ""}
     ${isClient ? `<div><b>${esc(TL.quoteNo)}</b> ${esc(quoteNo)}</div><div><b>${esc(TL.validUntil)}</b> ${esc(validUntilStr)}</div>` : ""}
     <div><b>${esc(TL.location)}</b> ${loc}</div><div><b>${esc(TL.date)}</b> ${new Date(project.updatedAt).toLocaleDateString()}</div></div>
     ${wxHtml}<h2>${esc(TL.scope)}${!isClient ? ` (${reportItems.length})` : ""}</h2>${bodyHtml || "<p>—</p>"}${totalsHtml}${planHtml}${sigHtml}
-    <footer>${esc(company.name)} · ${esc(TL.generated)} ${new Date().toLocaleString()}</footer></body></html>`;
+    <footer>${esc(company.name)} · ${esc(TL.generated)} ${new Date().toLocaleString()}</footer>
+    </div>
+    <script>
+      function saveJpg(){ var el=document.getElementById('doc');
+        html2canvas(el,{scale:2,backgroundColor:'#ffffff'}).then(function(cv){
+          var a=document.createElement('a'); a.href=cv.toDataURL('image/jpeg',0.92);
+          a.download=${JSON.stringify(`${project.name}_${ isClient ? "quotation" : isQuote ? "quote_request" : "progress" }.jpg`)}; a.click();
+        }).catch(function(){ alert('Image export failed — use Save as PDF instead.'); });
+      }
+    </script></body></html>`;
   const blob = new Blob([html], { type: "text/html" }); const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url;
-  const fnameKind = isClient ? "quotation" : isQuote ? "quote_request" + (tradeKey ? "_" + tradeKey : "") : "progress";
-  a.download = `${project.name}_${fnameKind}.html`; a.click(); URL.revokeObjectURL(url);
+  const w = window.open(url, "_blank");
+  if (!w) { // popup blocked → fall back to download
+    const a = document.createElement("a"); a.href = url;
+    const fnameKind = isClient ? "quotation" : isQuote ? "quote_request" + (tradeKey ? "_" + tradeKey : "") : "progress";
+    a.download = `${project.name}_${fnameKind}.html`; a.click();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /* ════════ shared styles ════════ */
