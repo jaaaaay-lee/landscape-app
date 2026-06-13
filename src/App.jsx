@@ -98,6 +98,9 @@ const I18N = {
     exportHint: "Saves all jobs to one file. Keep it as a backup or move to another device.",
     importConfirm: "Import this file? It will merge with your current jobs.", importDone: "Import complete.",
     importFail: "Couldn't read that file.", savePhoto: "Save photo", saveJpg: "Save as image",
+    penSize: "Pen size", eraserSize: "Eraser size", clearAll: "Clear all",
+    enterLength: "Enter this line's length (e.g. 2.5m):",
+    drawHint2: "Pen/erase: drag on the photo. Dimension: drag a line, then type its real length.",
   },
   ko: {
     projects: "프로젝트", newProject: "새 프로젝트", noProjects: "프로젝트가 없습니다 — 새로 만들어 시작하세요.",
@@ -163,6 +166,9 @@ const I18N = {
     exportHint: "모든 잡을 파일 하나로 저장해요. 백업하거나 다른 기기로 옮길 때 쓰세요.",
     importConfirm: "이 파일을 가져올까요? 현재 잡과 합쳐집니다.", importDone: "가져오기 완료.",
     importFail: "파일을 읽지 못했어요.", savePhoto: "사진 저장", saveJpg: "이미지로 저장",
+    penSize: "펜 굵기", eraserSize: "지우개 굵기", clearAll: "전체 지우기",
+    enterLength: "이 선의 실제 길이를 입력하세요 (예: 2.5m):",
+    drawHint2: "펜/지우개: 사진 위를 드래그. 치수: 선을 그은 뒤 실제 길이를 입력하세요.",
   },
 };
 const T = (lang, k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
@@ -1388,75 +1394,114 @@ function TradeQuotes({ project, setProject, L, onBuild }) {
 }
 
 /* ═══════════════ Photo editor ═══════════════ */
+const EDITOR_COLORS = ["#000000", "#ff2d2d", "#1fc24d", "#2d7dff", "#ffffff", "#ff5fbf", "#ffd400", "#ff8c1a", "#9aa0a6"];
+// black, red, green, blue, white, pink, yellow, orange, grey
 function PhotoEditor({ photo, onClose, onSave, L }) {
-  const canvasRef = useRef(); const imgRef = useRef();
+  const canvasRef = useRef();      // visible composite (photo + drawings)
+  const imgRef = useRef();
   const [tool, setTool] = useState("draw"); const [color, setColor] = useState("#ff2d2d");
+  const [width, setWidth] = useState(4);     // brush/eraser thickness
   const [strokes, setStrokes] = useState([]); const [drawing, setDrawing] = useState(false);
-  const [dimStart, setDimStart] = useState(null); const [scale, setScale] = useState({ pxPerUnit: null, unit: "m" });
-  const COLORS = ["#000000", "#ff2d2d", "#1fc24d", "#2d7dff", "#ffffff", "#ff5fbf"]; // black, red, green, blue, white, pink
+  const [dimStart, setDimStart] = useState(null); const [dimPreview, setDimPreview] = useState(null);
+  const cur = useRef(null);        // current in-progress stroke
+
   useEffect(() => { const img = new Image(); img.onload = () => { imgRef.current = img; const cv = canvasRef.current;
-    const maxW = Math.min(window.innerWidth - 40, 780); const ratio = img.height / img.width; cv.width = maxW; cv.height = maxW * ratio; redraw([]); };
+    const maxW = Math.min(window.innerWidth - 40, 780); const ratio = img.height / img.width;
+    cv.width = maxW; cv.height = maxW * ratio; redraw(strokes, null); };
     img.src = photo.annotated || photo.src; }, []);
-  const redraw = (sk) => {
+
+  // draw a single stroke onto a given 2d context
+  const paintStroke = (ctx, s) => {
+    if (s.tool === "draw") {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 4; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath(); s.points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke();
+    } else if (s.tool === "erase") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0,0,0,1)"; ctx.lineWidth = s.width || 20; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath(); s.points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke();
+      ctx.globalCompositeOperation = "source-over";
+    } else if (s.tool === "dim" && s.points.length === 2) {
+      ctx.globalCompositeOperation = "source-over";
+      const [a, b] = s.points; ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width || 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      [a, b].forEach((p) => { const ang = Math.atan2(b.y - a.y, b.x - a.x) + Math.PI / 2; ctx.beginPath();
+        ctx.moveTo(p.x - 8 * Math.cos(ang), p.y - 8 * Math.sin(ang)); ctx.lineTo(p.x + 8 * Math.cos(ang), p.y + 8 * Math.sin(ang)); ctx.stroke(); });
+      if (s.label) { const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2; ctx.font = "bold 16px sans-serif"; const w = ctx.measureText(s.label).width;
+        ctx.fillStyle = "rgba(0,0,0,.72)"; ctx.fillRect(mx - w / 2 - 6, my - 22, w + 12, 24); ctx.fillStyle = s.color; ctx.textAlign = "center";
+        ctx.fillText(s.label, mx, my - 5); ctx.textAlign = "start"; }
+    }
+  };
+  // build the drawing layer (strokes only, transparent) so eraser only removes drawings
+  const buildLayer = (sk) => {
+    const cv = canvasRef.current; const layer = document.createElement("canvas");
+    layer.width = cv.width; layer.height = cv.height; const lctx = layer.getContext("2d");
+    sk.forEach((s) => paintStroke(lctx, s));
+    return layer;
+  };
+  const redraw = (sk, preview) => {
     const cv = canvasRef.current, ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
     if (imgRef.current) ctx.drawImage(imgRef.current, 0, 0, cv.width, cv.height);
-    sk.forEach((s) => { ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
-      if (s.tool === "draw") { ctx.beginPath(); s.points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke(); }
-      else if (s.tool === "dim" && s.points.length === 2) { const [a, b] = s.points; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-        [a, b].forEach((p) => { const ang = Math.atan2(b.y - a.y, b.x - a.x) + Math.PI / 2; ctx.beginPath();
-          ctx.moveTo(p.x - 7 * Math.cos(ang), p.y - 7 * Math.sin(ang)); ctx.lineTo(p.x + 7 * Math.cos(ang), p.y + 7 * Math.sin(ang)); ctx.stroke(); });
-        if (s.label) { const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2; ctx.font = "bold 15px sans-serif"; const w = ctx.measureText(s.label).width;
-          ctx.fillStyle = "rgba(0,0,0,.7)"; ctx.fillRect(mx - w / 2 - 5, my - 20, w + 10, 22); ctx.fillStyle = s.color; ctx.textAlign = "center";
-          ctx.fillText(s.label, mx, my - 4); ctx.textAlign = "start"; } } });
+    const all = preview ? [...sk, preview] : sk;
+    ctx.drawImage(buildLayer(all), 0, 0);
   };
   const pos = (e) => { const r = canvasRef.current.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e;
     return { x: (t.clientX - r.left) * (canvasRef.current.width / r.width), y: (t.clientY - r.top) * (canvasRef.current.height / r.height) }; };
+
   const down = (e) => { e.preventDefault(); const p = pos(e);
-    if (tool === "erase") { setDrawing(true); eraseAt(p); }
-    else if (tool === "draw") { setDrawing(true); setStrokes((s) => [...s, { tool: "draw", color, points: [p] }]); }
-    else setDimStart(p); };
-  const eraseAt = (p) => {
-    setStrokes((s) => { const kept = s.filter((st) => {
-        if (st.tool === "draw") return !st.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 16);
-        if (st.tool === "dim") return !st.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 18);
-        return true; });
-      redraw(kept); return kept; });
-  };
+    if (tool === "draw" || tool === "erase") { setDrawing(true); cur.current = { tool, color, width: tool === "erase" ? width * 4 : width, points: [p] };
+      redraw(strokes, cur.current); }
+    else if (tool === "dim") { setDimStart(p); setDimPreview(null); } };
   const move = (e) => {
-    if (tool === "erase" && drawing) { e.preventDefault(); eraseAt(pos(e)); return; }
-    if (tool === "draw" && drawing) { e.preventDefault(); const p = pos(e);
-      setStrokes((s) => { const c = [...s]; c[c.length - 1].points.push(p); redraw(c); return c; }); }
-    else if (tool === "dim" && dimStart) redraw([...strokes, { tool: "dim", color, points: [dimStart, pos(e)] }]); };
-  const up = (e) => { if (tool === "draw" || tool === "erase") { setDrawing(false); return; }
-    if (tool === "dim" && dimStart) { const p = pos(e.changedTouches ? { ...e, clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY } : e);
-      const dist = Math.hypot(p.x - dimStart.x, p.y - dimStart.y); if (dist < 8) { setDimStart(null); return; }
-      let label = ""; if (scale.pxPerUnit) label = (dist / scale.pxPerUnit).toFixed(2) + scale.unit;
-      else { const input = window.prompt(T(L, "dimension") + " (e.g. 2.5m):", "");
-        if (input) { label = input; const num = parseFloat(input); if (num > 0) { const unit = input.replace(/[\d.\s]/g, "") || "m"; setScale({ pxPerUnit: dist / num, unit }); } } }
-      const ns = [...strokes, { tool: "dim", color, points: [dimStart, p], label }]; setStrokes(ns); setDimStart(null); redraw(ns); } };
-  const undo = () => { const ns = strokes.slice(0, -1); setStrokes(ns); redraw(ns); };
+    if ((tool === "draw" || tool === "erase") && drawing && cur.current) { e.preventDefault(); cur.current.points.push(pos(e)); redraw(strokes, cur.current); }
+    else if (tool === "dim" && dimStart) { const p = pos(e); const prev = { tool: "dim", color, width, points: [dimStart, p] }; setDimPreview(prev); redraw(strokes, prev); } };
+  const up = (e) => {
+    if ((tool === "draw" || tool === "erase") && cur.current) { const ns = [...strokes, cur.current]; cur.current = null; setDrawing(false); setStrokes(ns); redraw(ns, null); return; }
+    if (tool === "dim" && dimStart) {
+      const t = e.changedTouches ? { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY } : e;
+      const p = pos(t); const dist = Math.hypot(p.x - dimStart.x, p.y - dimStart.y);
+      setDimPreview(null);
+      if (dist < 8) { setDimStart(null); redraw(strokes, null); return; }
+      // ask for this line's real length immediately
+      const input = window.prompt(T(L, "enterLength"), "");
+      const label = input && input.trim() ? input.trim() : "";
+      const ns = [...strokes, { tool: "dim", color, width, points: [dimStart, p], label }];
+      setDimStart(null); setStrokes(ns); redraw(ns, null);
+    }
+  };
+  const undo = () => { const ns = strokes.slice(0, -1); setStrokes(ns); redraw(ns, null); };
+  const clearAll = () => { setStrokes([]); redraw([], null); };
   const save = () => {
     const dims = strokes.filter((s) => s.tool === "dim" && s.label).map((s) => s.label);
     onSave(canvasRef.current.toDataURL("image/jpeg", 0.85), dims);
   };
+  const isErase = tool === "erase";
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.92)", zIndex: 50, display: "flex", flexDirection: "column", alignItems: "center", padding: 16, overflow: "auto" }}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", justifyContent: "center" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.93)", zIndex: 50, display: "flex", flexDirection: "column", alignItems: "center", padding: 16, overflow: "auto" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", justifyContent: "center" }}>
         <TBtn on={() => setTool("draw")} active={tool === "draw"} icon={Pencil} label={T(L, "draw")} />
         <TBtn on={() => setTool("dim")} active={tool === "dim"} icon={Ruler} label={T(L, "dimension")} />
         <TBtn on={() => setTool("erase")} active={tool === "erase"} icon={Eraser} label={T(L, "erase")} />
-        {COLORS.map((c) => <button key={c} onClick={() => { setColor(c); if (tool === "erase") setTool("draw"); }}
-          style={{ width: 34, height: 34, borderRadius: 8, background: c, cursor: "pointer",
-          border: color === c && tool !== "erase" ? "3px solid #fff" : "1px solid #888" }} />)}
         <TBtn on={undo} icon={Undo2} label={T(L, "undo")} />
+      </div>
+      <div style={{ display: "flex", gap: 7, marginBottom: 10, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
+        {EDITOR_COLORS.map((c) => <button key={c} onClick={() => { setColor(c); if (isErase) setTool("draw"); }}
+          style={{ width: 30, height: 30, borderRadius: 7, background: c, cursor: "pointer",
+          border: color === c && !isErase ? "3px solid #fff" : "1px solid #888" }} />)}
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center", color: "#ccc", fontSize: 13 }}>
+        <span>{isErase ? T(L, "eraserSize") : T(L, "penSize")}</span>
+        <input type="range" min="1" max="20" value={width} onChange={(e) => setWidth(Number(e.target.value))} style={{ width: 160 }} />
+        <span style={{ width: 22, textAlign: "right" }}>{width}</span>
       </div>
       <canvas ref={canvasRef} onMouseDown={down} onMouseMove={move} onMouseUp={up} onMouseLeave={up} onTouchStart={down} onTouchMove={move} onTouchEnd={up}
         style={{ touchAction: "none", borderRadius: 10, maxWidth: "100%", cursor: "crosshair", background: "#000" }} />
-      <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" }}>
         <button onClick={onClose} style={{ background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: "11px 22px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><X size={16} /> {T(L, "cancel")}</button>
+        <button onClick={clearAll} style={{ background: "#3a2020", color: "#ffb3b3", border: `1px solid ${C.line}`, borderRadius: 10, padding: "11px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><Trash2 size={15} /> {T(L, "clearAll")}</button>
         <button onClick={save} style={{ background: C.green, color: C.bg, border: "none", borderRadius: 10, fontWeight: 700, padding: "11px 26px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><Check size={16} /> {T(L, "save")}</button>
       </div>
-      <p style={{ color: C.dim, fontSize: 12, marginTop: 10, textAlign: "center", maxWidth: 420 }}>{T(L, "drawHint")}</p>
+      <p style={{ color: C.dim, fontSize: 12, marginTop: 10, textAlign: "center", maxWidth: 420 }}>{T(L, "drawHint2")}</p>
     </div>
   );
 }
